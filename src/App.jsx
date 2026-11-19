@@ -133,10 +133,30 @@ function ModulePage({id}) {
   };
   const remove=ref=>{if(window.confirm('Delete this local prototype record?'))persist(records.filter(r=>r.ref!==ref))};
   const exportCsv=()=>{
-    const cols=['ref','name','province','district','category','status','detail','updated'];
-    const csv=[cols.join(','),...filtered.map(r=>cols.map(k=>`"${String(r[k]??'').replaceAll('"','""')}"`).join(','))].join('\n');
-    const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-    const a=document.createElement('a');a.href=url;a.download=`nimis-${id}-records.csv`;document.body.appendChild(a);a.click();a.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+    const columns=['ref','name','province','district','category','status','detail','updated'];
+    const escapeCell=value=>{
+      let text=String(value??'');
+      // Prevent spreadsheet formula execution when exported user-entered values are opened.
+      if(/^[\\s]*[=+\\-@]/.test(text))text="'"+text;
+      return `"${text.replaceAll('"','""')}"`;
+    };
+    const csv=[columns.map(escapeCell).join(','),...filtered.map(record=>columns.map(key=>escapeCell(record[key])).join(','))].join('\\r\\n');
+    let objectUrl;
+    try{
+      objectUrl=URL.createObjectURL(new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8'}));
+      const link=document.createElement('a');
+      link.href=objectUrl;
+      link.download=`nimis-${id}-records.csv`;
+      link.style.display='none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      // Keep the object URL alive long enough for the browser to start the download.
+      window.setTimeout(()=>URL.revokeObjectURL(objectUrl),1500);
+    }catch(error){
+      if(objectUrl)URL.revokeObjectURL(objectUrl);
+      setNotice('The CSV could not be generated in this browser. Please try again.');
+    }
   };
   const recordTitle=id==='water'?'Water source register':id==='infrastructure'?'Asset and condition register':id==='agronomy'?'Seasonal crop records':id==='projects'?'Project implementation register':id==='gis'?'Spatial scheme register':'Scheme master records';
   const formTitle=id==='water'?'Water source observation':id==='infrastructure'?'Infrastructure asset':id==='agronomy'?'Crop season record':id==='projects'?'Project milestone':id==='gis'?'Spatial location record':'Scheme information';
