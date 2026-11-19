@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import RegistryPage from './Registry.jsx';
 import {
   LayoutDashboard, Map, Droplets, Wrench, Sprout, ClipboardList, Database,
@@ -45,14 +47,47 @@ const moduleDescriptions = {
 
 function Status({ label }) { const cls = label.toLowerCase().includes('rehab') ? 'status amber' : label.toLowerCase().includes('watch') || label.toLowerCase().includes('attention') ? 'status amber' : 'status green'; return <span className={cls}><i />{label}</span>; }
 function KPI({ item }) { const Icon=item.icon; return <div className="kpi-card"><div className="kpi-top"><span className={`kpi-icon ${item.tint}`}><Icon size={18}/></span><span className={`trend ${item.up?'positive':'negative'}`}>{item.up?<ArrowUpRight size={14}/>:<ArrowDownRight size={14}/>} {item.trend}</span></div><div className="kpi-label">{item.title}</div><div className="kpi-value">{item.value}</div><div className="kpi-note">{item.note}</div></div>; }
-function MapVisual() { return <div className="map-visual"><div className="map-grid"/><svg className="map-outline" viewBox="0 0 400 300" aria-label="Stylised Zimbabwe map illustration"><path d="M121 27 L173 35 L209 23 L254 43 L279 80 L302 91 L298 127 L319 151 L300 181 L284 213 L260 237 L236 257 L202 269 L176 250 L151 237 L131 215 L114 187 L92 165 L82 130 L95 103 L87 72 L106 49 Z" fill="#d8e7db" stroke="#9ab5a4" strokeWidth="2"/><path d="M130 67 L166 88 L192 72 L217 95 L250 86 L265 120 L243 146 L250 177 L224 202 L193 219 L168 201 L145 175 L121 153 L115 122 Z" fill="#bed5c4" stroke="#a3bcae" strokeWidth="1.5"/><path d="M146 95 L174 115 L204 102 L229 122 L220 152 L193 165 L169 150 L146 133 Z" fill="#a5c8b1" stroke="#8eae9b"/><path d="M170 141 L193 158 L213 151 L228 173 L215 194 L188 200 L169 183 L158 163 Z" fill="#88b99b" stroke="#82a991"/><path d="M103 113 L126 129 L120 155 L104 150 Z" fill="#c1d9c7"/><path d="M219 82 L248 103 L252 122 L238 127 L223 112 Z" fill="#b0cfba"/><path d="M142 183 L159 194 L169 214 L151 219 L136 204 Z" fill="#b5d1bd"/></svg><div className="map-caption"><span className="map-dot"/><span>Zimbabwe · Province overview</span></div><div className="map-pins"><span className="pin p1"><b>12</b></span><span className="pin p2"><b>8</b></span><span className="pin p3"><b>24</b></span><span className="pin p4"><b>16</b></span><span className="pin p5"><b>6</b></span><span className="pin p6"><b>11</b></span></div><div className="map-legend"><span><i className="legend-dot green-dot"/> Operational</span><span><i className="legend-dot yellow-dot"/> Under review</span></div></div>; }
+const mapSchemes = [
+  { name:'Chisumbanje', province:'Manicaland', district:'Chisumbanje', id:'NIM-MAN-001', coords:[-20.88,32.22], status:'Operational', colour:'#34965c' },
+  { name:'Tongogara', province:'Manicaland', district:'Chipinge', id:'NIM-MAN-014', coords:[-20.63,32.45], status:'Operational', colour:'#34965c' },
+  { name:'Insukamini', province:'Midlands', district:'Kwekwe', id:'NIM-MID-008', coords:[-18.85,29.75], status:'Under review', colour:'#d99a36' },
+  { name:'Mushandike', province:'Masvingo', district:'Masvingo', id:'NIM-MAS-002', coords:[-20.15,30.83], status:'Operational', colour:'#34965c' },
+  { name:'Nyanyadzi', province:'Manicaland', district:'Nyanyadzi', id:'NIM-MAN-022', coords:[-20.85,32.75], status:'Operational', colour:'#34965c' },
+];
+function ZimbabweMap({ compact=false }) {
+  const mapElement=useRef(null);
+  const mapInstance=useRef(null);
+  useEffect(()=>{
+    if(!mapElement.current || mapInstance.current) return;
+    const map=L.map(mapElement.current,{scrollWheelZoom:!compact,zoomControl:true}).setView([-19.05,29.85],6.25);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+    mapSchemes.forEach(s=>{
+      const marker=L.circleMarker(s.coords,{radius:compact?6:8,color:'#ffffff',weight:2,fillColor:s.colour,fillOpacity:1}).addTo(map);
+      marker.bindPopup('<div class="map-popup"><strong>'+s.name+'</strong><span>'+s.province+' · '+s.district+'</span><span>'+s.id+'</span><em>'+s.status+'</em></div>');
+      if(!compact) marker.bindTooltip(s.name,{direction:'top',offset:[0,-7]});
+    });
+    mapInstance.current=map;
+    const resize=()=>map.invalidateSize();
+    const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(resize):null;
+    if(observer&&mapElement.current)observer.observe(mapElement.current);
+    window.setTimeout(resize,100);
+    return ()=>{observer?.disconnect();map.remove();mapInstance.current=null};
+  },[compact]);
+  return <div className={compact?'map-visual nimis-map-wrap':'nimis-map-wrap nimis-map-large'}>
+    <div ref={mapElement} className="nimis-map" role="application" aria-label="Interactive map of Zimbabwe showing illustrative irrigation scheme locations"/>
+    <div className="map-caption"><span className="map-dot"/><span>Zimbabwe · Scheme locations</span></div>
+    <div className="map-legend"><span><i className="legend-dot green-dot"/> Operational</span><span><i className="legend-dot yellow-dot"/> Under review</span></div>
+    {!compact&&<div className="map-source-note">Illustrative scheme points · verify coordinates through official GIS survey. Base map © OpenStreetMap contributors.</div>}
+  </div>;
+}
+
 function Dashboard({ onSelect }) { return <>
   <div className="welcome-row"><div><div className="eyebrow">NATIONAL OVERVIEW</div><h1>Executive Dashboard</h1><p className="subtitle">A consolidated view of irrigation scheme development and performance.</p></div><div className="period-select"><CalendarDays size={15}/> Reporting period <strong>November 2026</strong><ChevronDown size={14}/></div></div>
   <div className="data-note"><CircleHelp size={15}/><span><strong>Prototype data</strong> — figures shown are illustrative and not official national statistics.</span></div>
   <div className="kpi-grid">{kpis.map(k=><KPI key={k.title} item={k}/>)}</div>
   <div className="status-kpi-grid">{[['Operational','1,327','green'],['Functional','822','blue'],['Partially functional','266','amber'],['Under rehabilitation','178','cyan'],['Non-functional','61','red']].map(([label,value,tint])=><div className="status-kpi" key={label}><span className={'status-kpi-icon '+tint}><CircleDot size={15}/></span><div><small>{label}</small><strong>{value}</strong></div></div>)}</div>
 
-  <div className="dash-grid"><section className="panel map-panel"><div className="panel-head"><div><h2>Scheme distribution</h2><p>Geographic overview by province</p></div><button className="ghost-btn" onClick={()=>onSelect('gis')}>Explore map <ArrowUpRight size={15}/></button></div><MapVisual/></section>
+  <div className="dash-grid"><section className="panel map-panel"><div className="panel-head"><div><h2>Scheme distribution</h2><p>Geographic overview by province</p></div><button className="ghost-btn" onClick={()=>onSelect('gis')}>Explore map <ArrowUpRight size={15}/></button></div><ZimbabweMap compact/></section>
   <section className="panel province-panel"><div className="panel-head"><div><h2>Province coverage</h2><p>Registered scheme distribution index</p></div><button className="icon-btn"><Filter size={16}/></button></div><div className="province-list">{provinceData.map(([name,val])=><div className="province-row" key={name}><div className="province-label"><span>{name}</span><strong>{val}%</strong></div><div className="bar-track"><div className="bar-fill" style={{width:`${val}%`}}/></div></div>)}</div><div className="panel-foot">Illustrative provincial coverage index <span>View breakdown <ArrowUpRight size={13}/></span></div></section></div>
   <section className="panel schemes-panel"><div className="panel-head"><div><h2>Scheme activity</h2><p>Selected schemes with recent reporting records</p></div><button className="ghost-btn" onClick={()=>onSelect('registry')}>View registry <ArrowUpRight size={15}/></button></div><SchemesTable rows={schemes.slice(0,4)}/></section>
   <div className="bottom-grid"><section className="panel activity-panel"><div className="panel-head"><div><h2>Reporting activity</h2><p>Illustrative submissions summary</p></div><span className="live-label"><i/> Sample activity</span></div><div className="activity-items"><div className="activity-item"><span className="activity-icon green"><ShieldCheck size={16}/></span><div><strong>Scheme profile verified</strong><p>Demo record · Provincial review</p></div><time>Today</time></div><div className="activity-item"><span className="activity-icon blue"><Droplets size={16}/></span><div><strong>Water status updated</strong><p>Demo record · District reporting</p></div><time>Yesterday</time></div><div className="activity-item"><span className="activity-icon amber"><ClipboardList size={16}/></span><div><strong>Project milestone submitted</strong><p>Demo record · Implementation tracker</p></div><time>2 days</time></div></div></section><section className="panel quick-panel"><div className="panel-head"><div><h2>Quick access</h2><p>Common system workspaces</p></div></div><div className="quick-links"><button onClick={()=>onSelect('registry')}><Database size={17}/><span>Scheme registry</span><ArrowUpRight size={14}/></button><button onClick={()=>onSelect('projects')}><ClipboardList size={17}/><span>Project tracker</span><ArrowUpRight size={14}/></button><button onClick={()=>onSelect('reports')}><FileBarChart2 size={17}/><span>Reports & analytics</span><ArrowUpRight size={14}/></button></div></section></div>
@@ -104,6 +139,7 @@ function ModulePage({id}) {
     <div className="welcome-row"><div><div className="eyebrow">{m.eyebrow}</div><h1>{m.title}</h1><p className="subtitle">{m.description}</p></div><div className="period-select"><CalendarDays size={15}/> Reporting cycle <strong>Nov 2026</strong></div></div>
     <div className="data-note"><CircleHelp size={15}/><span><strong>Prototype records</strong> — sample information is illustrative, stored locally in this browser and is not connected to a national database.</span></div>
     <div className="kpi-grid module-kpis">{m.cards.map(([title,value],i)=><div className="kpi-card" key={title}><div className="kpi-top"><span className={`kpi-icon ${['green','gold','blue'][i]}`}><Activity size={18}/></span></div><div className="kpi-label">{title}</div><div className="kpi-value">{value}</div><div className="kpi-note">Illustrative summary · not verified</div></div>)}</div>
+    {id==='gis'&&<section className="panel gis-map-panel"><div className="panel-head"><div><h2>National scheme map</h2><p>Pan, zoom and select a point to inspect the illustrative scheme record.</p></div><span className="map-layer-label">OpenStreetMap · Street layer</span></div><ZimbabweMap/></section>}
     <section className="panel schemes-panel">
       <div className="panel-head"><div><h2>{recordTitle}</h2><p>{filtered.length} records displayed · linked to scheme references</p></div><div className="panel-actions"><button className="ghost-btn" onClick={exportCsv}><Download size={14}/> Export CSV</button><button className="reg-primary" onClick={openNew}>+ Add record</button></div></div>
       <div className="reg-toolbar"><div className="reg-search"><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, scheme ID, district..."/></div><select value={status} onChange={e=>setStatus(e.target.value)}><option>All statuses</option>{['Draft','Submitted','Under review','Verified','Approved','Attention required'].map(s=><option key={s}>{s}</option>)}</select></div>
