@@ -59,7 +59,7 @@ function Dashboard({ onSelect }) { return <>
   </>; }
 function SchemesTable({rows}) { return <div className="table-wrap"><table><thead><tr><th>Scheme / ID</th><th>Province</th><th>Developed area</th><th>Operational status</th><th>Water status</th><th>Readiness</th></tr></thead><tbody>{rows.map(s=><tr key={s.id}><td><div className="scheme-name">{s.name}<small>{s.id}</small></div></td><td>{s.province}</td><td>{s.area}</td><td><Status label={s.status}/></td><td><Status label={s.water}/></td><td><div className="readiness"><span className="readiness-track"><i style={{width:`${s.pct}%`}}/></span><b>{s.pct}%</b></div></td></tr>)}</tbody></table></div>; }
 function ModulePage({id}) {
-  const m=moduleDescriptions[id];
+  const m=moduleDescriptions[id] || moduleDescriptions.reports;
   const storageKey=`nimis-module-${id}-v1`;
   const initial=schemes.map((s,i)=>({
     ref:s.id,name:s.name,province:s.province,district:s.district,
@@ -69,7 +69,7 @@ function ModulePage({id}) {
     updated:'Nov 2026'
   }));
   const [records,setRecords]=useState(()=>{
-    try{const saved=JSON.parse(localStorage.getItem(storageKey));return Array.isArray(saved)?saved:initial}
+    try{const saved=typeof window!=='undefined'?JSON.parse(window.localStorage.getItem(storageKey)):null;return Array.isArray(saved)?saved:initial}
     catch{return initial}
   });
   const [query,setQuery]=useState('');
@@ -78,14 +78,16 @@ function ModulePage({id}) {
   const [draft,setDraft]=useState({ref:'',name:'',province:'Manicaland',district:'',category:'',status:'Draft',detail:''});
   const [editing,setEditing]=useState('');
   const [notice,setNotice]=useState('');
-  const persist=next=>{setRecords(next);try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{setNotice('Browser storage is unavailable. Changes remain only for this session.')}};
+  const persist=next=>{setRecords(next);try{if(typeof window!=='undefined')window.localStorage.setItem(storageKey,JSON.stringify(next));}catch{setNotice('Browser storage is unavailable. Changes remain only for this session.')}};
   const filtered=records.filter(r=>(status==='All statuses'||r.status===status)&&Object.values(r).some(v=>String(v??'').toLowerCase().includes(query.toLowerCase())));
   const openNew=()=>{setDraft({ref:'',name:'',province:'Manicaland',district:'',category:'',status:'Draft',detail:''});setEditing('');setShowForm(true)};
   const openEdit=r=>{setDraft({...r});setEditing(r.ref);setShowForm(true)};
   const submit=e=>{
     e.preventDefault();
     if(!draft.name.trim()||!draft.district.trim()||!draft.category.trim()){setNotice('Complete the scheme name, district and record category.');return}
-    const row={...draft,ref:editing||draft.ref.trim()||`NIM-${id.toUpperCase()}-${String(Date.now()).slice(-6)}`,updated:'Nov 2026'};
+    const requestedRef=draft.ref.trim();
+    if(!editing&&requestedRef&&records.some(r=>r.ref.toLowerCase()===requestedRef.toLowerCase())){setNotice('That reference ID already exists. Enter a unique ID or leave it blank for an automatic ID.');return}
+    const row={...draft,ref:editing||requestedRef||`NIM-${id.toUpperCase()}-${String(Date.now()).slice(-6)}`,updated:'Nov 2026'};
     persist(editing?records.map(r=>r.ref===editing?row:r):[row,...records]);
     setShowForm(false);setNotice('Record saved in this browser prototype.');
   };
@@ -94,7 +96,7 @@ function ModulePage({id}) {
     const cols=['ref','name','province','district','category','status','detail','updated'];
     const csv=[cols.join(','),...filtered.map(r=>cols.map(k=>`"${String(r[k]??'').replaceAll('"','""')}"`).join(','))].join('\n');
     const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-    const a=document.createElement('a');a.href=url;a.download=`nimis-${id}-records.csv`;a.click();URL.revokeObjectURL(url);
+    const a=document.createElement('a');a.href=url;a.download=`nimis-${id}-records.csv`;document.body.appendChild(a);a.click();a.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   };
   const recordTitle=id==='water'?'Water source register':id==='infrastructure'?'Asset and condition register':id==='agronomy'?'Seasonal crop records':id==='projects'?'Project implementation register':id==='gis'?'Spatial scheme register':'Scheme master records';
   const formTitle=id==='water'?'Water source observation':id==='infrastructure'?'Infrastructure asset':id==='agronomy'?'Crop season record':id==='projects'?'Project milestone':id==='gis'?'Spatial location record':'Scheme information';
