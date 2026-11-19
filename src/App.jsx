@@ -183,10 +183,51 @@ function ModulePage({id}) {
       </div><div className="reg-modal-actions"><button type="button" className="ghost-btn" onClick={()=>setShowForm(false)}>Cancel</button><button type="submit" className="reg-primary">Save record</button></div></form></section></div>}
   </div>;
 }
+const reportTemplates=[
+  {id:'scheme-profile',name:'National Scheme Profile',group:'Master data',frequency:'Monthly',purpose:'Summarises registered schemes, locations, water sources and verified scheme profile completeness.',fields:'Scheme ID · Province · District · Developed area · Equipped area · Currently irrigated area'},
+  {id:'area-development',name:'Irrigation Area Development',group:'Performance',frequency:'Quarterly',purpose:'Compares developed, equipped and currently irrigated area, with clear separation between the three measures.',fields:'Scheme ID · Reporting period · Developed area · Equipped area · Irrigated area · Source'},
+  {id:'water-resources',name:'Water Resources & Hydrology',group:'Water',frequency:'Monthly',purpose:'Consolidates reported water-source conditions and hydrological observations for review.',fields:'Scheme ID · Water source · Observation date · Water status · Source · Verification status'},
+  {id:'infrastructure-om',name:'Infrastructure Condition & O&M',group:'Assets',frequency:'Quarterly',purpose:'Summarises asset condition assessments, maintenance requirements and reported actions.',fields:'Scheme ID · Asset ID · Asset type · Condition · Maintenance priority · Assessment date'},
+  {id:'project-delivery',name:'Project Implementation',group:'Projects',frequency:'Monthly',purpose:'Tracks project milestones, reported progress, issues and handover readiness.',fields:'Project ID · Scheme ID · Milestone · Planned date · Reported status · Verification status'},
+];
+function ReportsPage(){
+  const [selected,setSelected]=useState(reportTemplates[0]);
+  const exportCatalogue=()=>{
+    const columns=['id','name','group','frequency','purpose','fields'];
+    const cell=value=>'"'+String(value??'').replaceAll('"','""')+'"';
+    const csv=[columns.map(cell).join(','),...reportTemplates.map(row=>columns.map(key=>cell(row[key])).join(','))].join('\\r\\n');
+    let url;
+    try{
+      url=URL.createObjectURL(new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8'}));
+      const link=document.createElement('a');link.href=url;link.download='NIMIS-report-catalogue.csv';
+      document.body.appendChild(link);link.click();link.remove();
+      window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }catch(error){if(url)URL.revokeObjectURL(url);window.alert('The report catalogue could not be exported. Please try again.')}
+  };
+  return <div className="module-page">
+    <div className="welcome-row"><div><div className="eyebrow">MANAGEMENT / REPORTING</div><h1>Reports & Analytics</h1><p className="subtitle">A catalogue of reporting views planned for governed NIMIS information.</p></div><button className="ghost-btn" onClick={exportCatalogue}><Download size={14}/> Export catalogue</button></div>
+    <div className="data-note"><CircleHelp size={15}/><span><strong>Prototype report catalogue</strong> — these are report definitions only. No live national data, report-generation service or Power BI connection is configured.</span></div>
+    <div className="kpi-grid module-kpis">
+      <div className="kpi-card"><div className="kpi-label">Report definitions</div><div className="kpi-value">{reportTemplates.length}</div><div className="kpi-note">Prototype catalogue</div></div>
+      <div className="kpi-card"><div className="kpi-label">Reporting cycles</div><div className="kpi-value">Monthly / quarterly</div><div className="kpi-note">Suggested frequencies</div></div>
+      <div className="kpi-card"><div className="kpi-label">Data publication</div><div className="kpi-value">Not connected</div><div className="kpi-note">Requires verified source records</div></div>
+    </div>
+    <section className="panel schemes-panel">
+      <div className="panel-head"><div><h2>Available report definitions</h2><p>Select a definition to inspect its purpose and expected fields.</p></div></div>
+      <div className="table-wrap"><table><thead><tr><th>Report</th><th>Category</th><th>Frequency</th><th>Definition</th></tr></thead><tbody>
+        {reportTemplates.map(report=><tr key={report.id}><td><button className="report-select" aria-pressed={selected.id===report.id} onClick={()=>setSelected(report)}>{report.name}</button></td><td>{report.group}</td><td>{report.frequency}</td><td><button className="ghost-btn" onClick={()=>setSelected(report)}>View definition</button></td></tr>)}
+      </tbody></table></div>
+    </section>
+    <section className="panel" style={{marginTop:16,padding:20}}>
+      <div className="eyebrow">REPORT DEFINITION</div><h2 style={{margin:'8px 0'}}>{selected.name}</h2><p>{selected.purpose}</p><div className="data-note"><strong>Expected fields:</strong> {selected.fields}</div><div className="reg-foot">Frequency: {selected.frequency} · Category: {selected.group} · This definition does not generate or publish a report.</div>
+    </section>
+  </div>;
+}
+
 export default function App() {
   const [active,setActive]=useState('dashboard'); const [sidebarOpen,setSidebarOpen]=useState(false); const [search,setSearch]=useState('');
   const activeItem=nav.find(n=>n.id===active); const grouped=useMemo(()=>['OVERVIEW','MONITORING','MANAGEMENT'].map(group=>({group,items:nav.filter(n=>n.group===group)})),[]);
   const change=(id)=>{setActive(id);setSidebarOpen(false);};
   return <div className="app-shell"><aside className={`sidebar ${sidebarOpen?'open':''}`}><div className="brand"><div className="brand-mark"><Waves size={23}/></div><div className="brand-text"><strong>NIMIS</strong><span>National Irrigation Management Information System</span></div><button className="close-sidebar" onClick={()=>setSidebarOpen(false)}><X size={18}/></button></div><div className="sidebar-divider"/><div className="nav-scroll">{grouped.map(g=><div className="nav-group" key={g.group}><div className="nav-heading">{g.group}</div>{g.items.map(n=>{const Icon=n.icon;return <button className={`nav-item ${active===n.id?'active':''}`} key={n.id} onClick={()=>change(n.id)}><Icon size={17}/><span>{n.label}</span>{active===n.id&&<span className="nav-active-dot"/>}</button>})}</div>)}</div><div className="sidebar-bottom"><div className="user-card"><div className="user-avatar">NI</div><div className="user-info"><strong>NIMIS Preview</strong><span>Prototype workspace</span></div><ChevronDown size={15}/></div><div className="sidebar-footer">Department of Irrigation Development<br/>Government of Zimbabwe</div></div></aside>{sidebarOpen&&<div className="mobile-overlay" onClick={()=>setSidebarOpen(false)}/>}
-  <main className="main-area"><header className="topbar"><div className="ministry-brand"><strong>Ministry of Agriculture, Mechanisation and Water Resources Development</strong><span>Department of Irrigation Development</span></div><button className="mobile-menu icon-btn" onClick={()=>setSidebarOpen(true)}><Menu size={19}/></button><div className="breadcrumb"><span>NIMIS</span><b>/</b><strong>{activeItem?.label}</strong></div><div className="top-actions"><div className="searchbox"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search schemes, districts..." aria-label="Search"/>{search&&<button onClick={()=>setSearch('')}><X size={13}/></button>}</div><button className="icon-btn notification-btn" aria-label="Notifications"><Bell size={17}/><i/></button><div className="top-user"><div className="user-avatar small">NI</div><span>Preview</span><ChevronDown size={14}/></div></div></header><div className="content-wrap"><div className="content-inner">{active==='dashboard'?<Dashboard onSelect={change}/>:active==='registry'?<RegistryPage/>:<ModulePage id={active}/>}<footer className="page-footer"><span>© 2026 NIMIS · National Irrigation Management Information System</span><span><span className="footer-status"/> Prototype environment</span></footer></div></div></main></div>;
+  <main className="main-area"><header className="topbar"><div className="ministry-brand"><strong>Ministry of Agriculture, Mechanisation and Water Resources Development</strong><span>Department of Irrigation Development</span></div><button className="mobile-menu icon-btn" onClick={()=>setSidebarOpen(true)}><Menu size={19}/></button><div className="breadcrumb"><span>NIMIS</span><b>/</b><strong>{activeItem?.label}</strong></div><div className="top-actions"><div className="searchbox"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search schemes, districts..." aria-label="Search"/>{search&&<button onClick={()=>setSearch('')}><X size={13}/></button>}</div><button className="icon-btn notification-btn" aria-label="Notifications"><Bell size={17}/><i/></button><div className="top-user"><div className="user-avatar small">NI</div><span>Preview</span><ChevronDown size={14}/></div></div></header><div className="content-wrap"><div className="content-inner">{active==='dashboard'?<Dashboard onSelect={change}/>:active==='registry'?<RegistryPage/>:active==='reports'?<ReportsPage/>:<ModulePage id={active}/>}<footer className="page-footer"><span>© 2026 NIMIS · National Irrigation Management Information System</span><span><span className="footer-status"/> Prototype environment</span></footer></div></div></main></div>;
 }
