@@ -8,3 +8,75 @@
 
 /* Executive dashboard reference KPI row */
 .status-kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:0 0 13px}.status-kpi{display:flex;align-items:center;gap:9px;padding:10px 11px;background:#fff;border:1px solid #e4e9e6;border-radius:8px;min-width:0}.status-kpi-icon{width:30px;height:30px;display:grid;place-items:center;border-radius:7px;flex-shrink:0}.status-kpi-icon.green{background:#e5f5e9;color:#279451}.status-kpi-icon.blue{background:#e8f0ff;color:#4276c9}.status-kpi-icon.amber{background:#fff2df;color:#dc8a28}.status-kpi-icon.cyan{background:#e4f6fb;color:#2998bb}.status-kpi-icon.red{background:#ffebed;color:#c54c5c}.status-kpi small{display:block;font-size:9px;color:#829087;margin-bottom:3px}.status-kpi strong{font-size:17px;color:#263e30}@media(max-width:780px){.status-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr)}}@media(max-width:450px){.status-kpi-grid{grid-template-columns:1fr 1fr}.status-kpi strong{font-size:15px}}
+
+/* === NIMIS reference-screen fidelity layer === */
+:root{font-family:Arial,Helvetica,sans-serif;color:#26362d;background:#f1f4f2;font-size:12px}
+body{background:#f1f4f2}
+.sidebar{width:166px;background:#f5f7f6;color:#34443a;border-right:1px solid #dfe6e1;box-shadow:none}
+.brand{height:54px;padding:0 10px;gap:7px;background:#075b3a;color:#fff}
+.brand-mark{width:29px;height:29px;border-radius:50%;background:#fff;color:#176341;border:2px solid #d5e8d9}
+.brand-mark svg{width:17px;height:17px}
+.brand-text{min-width:0;gap:1px}
+.brand-text strong{font-size:15px;letter-spacing:.2px;color:#fff}
+.brand-text span{font-size:7px;line-height:1.2;color:#e2eee6;letter-spacing:0}
+.sidebar-divider{display:none}
+.nav-scroll{padding:8px 6px}
+.nav-group{margin-bottom:12px}
+.nav-heading{font-size:8px;letter-spacing:.7px;color:#8b9a90;padding:0 7px 5px}
+.nav-item{color:#526157;padding:8px 7px;gap:7px;border-radius:4px;margin:1px 0;font-size:9px;line-height:1.15}
+.nav-item svg{width:13px;height:13px;flex-shrink:0}
+.nav-item.active{background:#dcefe3;color:#075b3a;box-shadow:inset 3px 0 #087446;font-weight:700}
+.nav-item.active svg{color:#087446}
+.nav-active-dot{width:4px;height:4px;background:#087446}
+.sidebar-bottom{padding:8px 7px 9px;border-top:1px solid #e0e7e2}
+.user-card{padding:6px 5px;background:#fff;border:1px solid #e2e9e4;border-radius:5px;gap:6px}
+.user-avatar{width:25px;height:25px;font-size:8px}
+.user-info strong{font-size:8px;color:#34483a}.user-info span{font-size:7px;color:#819087}
+.sidebar-footer{font-size:7px;color:#829188;padding:8px 3px 0}
+.main-area{margin-left:166px}
+.topbar{height:55px;background:#075b3a;border-bottom:0;color:#fff;padding:0 16px;box-shadow:0 1px 3px #123a281c}
+.breadcrumb{color:#d7e8dd;font-size:9px;gap:7px}
+.breadcrumb b{color:#a9c8b6}.breadcrumb strong{color:#fff}
+.ministry-brand{display:flex;flex-direction:column;gap:2px;color:#fff;min-width:0;flex:1;padding-left:12px}
+.ministry-brand strong{font-size:9px;font-weight:700;letter-spacing:.1px}
+.ministry-brand span{font-size:7px;color:#d7e9de}
+.top-actions{gap:9px}
+.searchbox{height:27px;width:175px;border:1px solid #ffffff48;background:#ffffff12;color:#e5f0e9;border-radius:4px}
+.searchbox input{font-size:9px;color:#fff}.searchbox input::placeholder{color:#d1e1d7}
+.searchbox svg{width:13px;height:13px}
+.icon-btn{width:27px;height:27px;border-color:#ffffff38;background:#ffffff12;color:#fff;border-radius:4px}
+.top-user{color:#fff;font-size:9px}.top-user .user-avatar{background:#e4efe7;color:#17583a}
+.content-wrap{padding:15px 16px 14px}
+.content-inner{max-width:1600px}
+.welcome-row{margin-bottom:9px;align-items:center}
+.eyebrow{font-size:8px;letter-spacing:.6px;color:#71867a;margin-bottom:4px}
+.welcome-row h1{font-size:17px;letter-spacing:-.2px;color:#183d2a}
+.subtitle{font-size:9px;margin-top:4px;color:#7b8980}
+.period-select{height:27px;border-radius:4px;font-size:8px;padding:0 8px}
+.data-note{padding:6px 8px;border-radius:4px;font-size:8px;margin-bottom:9px}
+.kpi-grid{gap:7px;margin-bottom:8px}
+.kpi-card{border-radius:5px;padding:8px 9px;box-shadow:none;border-color:#e2e9e4}
+.kpi-top{margin-bottom:6px}.kpi-icon{width:24px;height:24px;border-radius:5px}.kpi-icon svg{width:14px;height:14px}
+.trend{font-size:8px}.kpi-label{font-size:8px;margin-bottom:4px}.kpi-value{font-size:17px;letter-spacing:-.3px}.kpi-note{font-size:7px;margin-top:4px}
+.status-kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:0 0 9px}
+.status-kpi{padding:7px 8px;border-radius:5px;gap:6px;box-shadow:none}
+.status-kpi-icon{width:23px;height:23px;border-radius:4px}.status-kpi-icon svg{width:12px;height:12px}
+.status-kpi small{font-size:7px}.status-kpi strong{font-size:14px}
+.dash-grid{grid-template-columns:1.08fr .92fr;gap:8px;margin-bottom:9px}
+.panel{border-radius:5px;box-shadow:none;border-color:#e0e7e2}
+.map-panel,.province-panel{min-height:235px}
+.panel-head{padding:9px 10px 7px;gap:7px}
+.panel-head h2{font-size:10px;color:#254332}.panel-head p{font-size:8px;margin-top:3px}
+.ghost-btn{font-size:8px;padding:5px 7px;border-radius:4px}
+.province-row{margin-bottom:8px}.province-label{font-size:8px}.bar-track{height:5px;border-radius:2px}
+.panel-foot{font-size:7px;padding:7px 10px}
+.schemes-panel{margin-bottom:9px}
+.table-wrap th{font-size:7px;padding:7px 8px}.table-wrap td{font-size:8px;padding:7px 8px}
+.scheme-name{font-size:8px}.scheme-name small{font-size:7px}
+.status{font-size:7px;padding:3px 5px}
+.bottom-grid{gap:8px}
+.activity-item{padding:7px 9px}.activity-item strong{font-size:8px}.activity-item p,.activity-item time{font-size:7px}
+.quick-links button{padding:7px 9px;font-size:8px}
+.page-footer{font-size:7px;padding-top:8px}
+@media(max-width:900px){.sidebar{width:166px}.main-area{margin-left:166px}.content-wrap{padding:12px 10px}.ministry-brand strong{font-size:8px}}
+@media(max-width:680px){.sidebar{transform:translateX(-100%);width:235px}.sidebar.open{transform:translateX(0)}.main-area{margin-left:0}.topbar{height:48px;padding:0 9px}.ministry-brand{display:none}.content-wrap{padding:10px 8px}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.status-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-grid,.bottom-grid{grid-template-columns:1fr}.map-panel,.province-panel{min-height:200px}.welcome-row h1{font-size:16px}.top-actions{gap:5px}.searchbox{width:125px}.top-user span{display:none}}
