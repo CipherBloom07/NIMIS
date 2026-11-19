@@ -117,3 +117,9 @@ body{background:#f1f4f2}
 .status.red{background:#ffebed;color:#b74655}.status.red i{background:#c94d5c}
 @media (min-width:681px) and (max-width:900px){.sidebar{transform:translateX(0);width:166px}.main-area{margin-left:166px}.mobile-menu{display:none}.mobile-overlay{display:none}}
 @media(max-width:680px){.sidebar{width:235px}.main-area{margin-left:0}.mobile-menu{display:grid}}
+
+
+/* Report catalogue selection */
+.report-select{border:0;background:transparent;color:#176b48;font:inherit;font-weight:700;text-align:left;padding:4px 0;cursor:pointer}
+.report-select:hover,.report-select:focus-visible{text-decoration:underline;outline-offset:3px}
+.report-select[aria-pressed="true"]{color:#0b4f35}
