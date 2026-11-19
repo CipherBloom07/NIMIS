@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Map, Droplets, Wrench, Sprout, ClipboardList, Database,
   FileBarChart2, Search, Bell, ChevronDown, Menu, X, ArrowUpRight,
   ArrowDownRight, Activity, MapPin, CalendarDays, Filter, Download,
-  CircleHelp, Settings, ShieldCheck, CircleDot, TrendingUp, Waves,
+  CircleHelp, Settings, ShieldCheck, CircleDot, TrendingUp, Waves, Pencil, Trash2,
 } from 'lucide-react';
 
 
