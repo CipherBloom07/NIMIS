@@ -27,10 +27,10 @@ const schemes = [
   { name: 'Nyanyadzi', province: 'Manicaland', district: 'Nyanyadzi', area: '560 ha', status: 'Operational', pct: 62, water: 'Watch', crop: 'Horticulture', id: 'NIM-MAN-022' },
 ];
 const kpis = [
-  { title: 'Registered schemes', value: '1,284', note: 'Across all provinces', trend: '+3.2%', up: true, icon: MapPin, tint: 'green' },
-  { title: 'Developed area', value: '68,420 ha', note: 'Scheme-developed area', trend: '+1.8%', up: true, icon: Sprout, tint: 'gold' },
-  { title: 'Operational schemes', value: '862', note: '67.1% of registered', trend: '-0.6%', up: false, icon: Activity, tint: 'blue' },
-  { title: 'Water availability', value: '74.6%', note: 'Indicative national status', trend: '+4.1%', up: true, icon: Waves, tint: 'cyan' },
+  { title: 'Currently irrigated area', value: '305,121 ha', note: 'Reported irrigated area', trend: '+2.4%', up: true, icon: Sprout, tint: 'green' },
+  { title: '2030 National Target', value: '496,000 ha', note: 'National irrigation target', trend: 'Target', up: true, icon: TrendingUp, tint: 'blue' },
+  { title: 'Progress to target', value: '61.5%', note: 'Target achievement', trend: '+1.2%', up: true, icon: Activity, tint: 'cyan' },
+  { title: 'Remaining to target', value: '190,879 ha', note: 'Area gap to target', trend: 'Gap', up: false, icon: MapPin, tint: 'gold' },
 ];
 const provinceData = [ ['Mashonaland West',86], ['Manicaland',73], ['Mashonaland East',69], ['Masvingo',64], ['Midlands',58], ['Mashonaland Central',53], ['Matabeleland South',45], ['Matabeleland North',39], ['Harare',22], ['Bulawayo',17] ];
 const moduleDescriptions = {
