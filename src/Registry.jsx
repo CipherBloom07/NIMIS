@@ -13,7 +13,14 @@ const[records,setRecords]=useState(()=>{try{const data=JSON.parse(localStorage.g
 const[q,setQ]=useState(''),[province,setProvince]=useState('All provinces'),[status,setStatus]=useState('All statuses'),[form,setForm]=useState(empty),[editing,setEditing]=useState(''),[show,setShow]=useState(false);
 const save=data=>{setRecords(data);try{localStorage.setItem(key,JSON.stringify(data))}catch{}};
 const rows=useMemo(()=>records.filter(r=>(province==='All provinces'||r.province===province)&&(status==='All statuses'||r.status===status)&&Object.values(r).some(v=>String(v??'').toLowerCase().includes(q.toLowerCase()))),[records,q,province,status]);
-const totals=records.reduce((t,r)=>({d:t.d+(Number(r.developed)||0),e:t.e+(Number(r.equipped)||0),i:t.i+(Number(r.irrigated)||0}),{d:0,e:0,i:0});
+const totals = records.reduce(
+  (total, record) => ({
+    d: total.d + (Number(record.developed) || 0),
+    e: total.e + (Number(record.equipped) || 0),
+    i: total.i + (Number(record.irrigated) || 0),
+  }),
+  { d: 0, e: 0, i: 0 },
+);
 const startNew=()=>{setForm(empty);setEditing('');setShow(true)},startEdit=r=>{setForm({...r});setEditing(r.id);setShow(true)};
 const submit=e=>{e.preventDefault();const d=Number(form.developed),eq=Number(form.equipped),ir=Number(form.irrigated);if([d,eq,ir].some(v=>!Number.isFinite(v)||v<0)||eq>d||ir>eq){alert('Area check: currently irrigated ≤ equipped ≤ developed; values cannot be negative.');return}const item={...form,developed:d,equipped:eq,irrigated:ir};if(editing)save(records.map(r=>r.id===editing?{...item,id:editing}:r));else{item.id='NIM-'+form.province.slice(0,3).toUpperCase()+'-'+String(records.length+1).padStart(3,'0');save([...records,item])}setShow(false)};
 const csv=()=>{const cols=['id','name','province','district','water','status','developed','equipped','irrigated'];const out=[cols.join(','),...rows.map(r=>cols.map(c=>'"'+String(r[c]??'').replaceAll('"','""')+'"').join(','))].join('\n');const blob=new Blob([out],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='NIMIS-scheme-registry.csv';a.click();URL.revokeObjectURL(url)};
