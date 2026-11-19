@@ -45,7 +45,7 @@ const moduleDescriptions = {
   reports: { eyebrow:'MANAGEMENT / INSIGHTS', title:'Reports & Analytics', description:'Explore governed indicators and prepare consistent management reporting views.', cards:[['Report templates','18'],['Reporting cycle','Monthly'],['Latest snapshot','Nov 2026']], tableTitle:'Available reporting views' },
 };
 
-function Status({ label }) { const cls = label.toLowerCase().includes('rehab') ? 'status amber' : label.toLowerCase().includes('watch') || label.toLowerCase().includes('attention') ? 'status amber' : 'status green'; return <span className={cls}><i />{label}</span>; }
+function Status({ label }) { const value=String(label).toLowerCase(); const cls=value.includes('non-functional')||value.includes('critical')?'status red':value.includes('rehab')||value.includes('watch')||value.includes('attention')||value.includes('review')?'status amber':value.includes('draft')||value.includes('submitted')?'status neutral':'status green'; return <span className={cls}><i />{label}</span>; }
 function KPI({ item }) { const Icon=item.icon; return <div className="kpi-card"><div className="kpi-top"><span className={`kpi-icon ${item.tint}`}><Icon size={18}/></span><span className={`trend ${item.up?'positive':'negative'}`}>{item.up?<ArrowUpRight size={14}/>:<ArrowDownRight size={14}/>} {item.trend}</span></div><div className="kpi-label">{item.title}</div><div className="kpi-value">{item.value}</div><div className="kpi-note">{item.note}</div></div>; }
 const mapSchemes = [
   { name:'Chisumbanje', province:'Manicaland', district:'Chisumbanje', id:'NIM-MAN-001', coords:[-20.88,32.22], status:'Operational', colour:'#34965c' },
@@ -70,8 +70,8 @@ function ZimbabweMap({ compact=false }) {
     const resize=()=>map.invalidateSize();
     const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(resize):null;
     if(observer&&mapElement.current)observer.observe(mapElement.current);
-    window.setTimeout(resize,100);
-    return ()=>{observer?.disconnect();map.remove();mapInstance.current=null};
+    const resizeTimer=window.setTimeout(resize,100);
+    return ()=>{window.clearTimeout(resizeTimer);observer?.disconnect();map.remove();mapInstance.current=null};
   },[compact]);
   return <div className={compact?'map-visual nimis-map-wrap':'nimis-map-wrap nimis-map-large'}>
     <div ref={mapElement} className="nimis-map" role="application" aria-label="Interactive map of Zimbabwe showing illustrative irrigation scheme locations"/>
@@ -121,8 +121,13 @@ function ModulePage({id}) {
     e.preventDefault();
     if(!draft.name.trim()||!draft.district.trim()||!draft.category.trim()){setNotice('Complete the scheme name, district and record category.');return}
     const requestedRef=draft.ref.trim();
-    if(!editing&&requestedRef&&records.some(r=>r.ref.toLowerCase()===requestedRef.toLowerCase())){setNotice('That reference ID already exists. Enter a unique ID or leave it blank for an automatic ID.');return}
-    const row={...draft,ref:editing||requestedRef||`NIM-${id.toUpperCase()}-${String(Date.now()).slice(-6)}`,updated:'Nov 2026'};
+    if(!editing&&requestedRef&&records.some(r=>String(r.ref).toLowerCase()===requestedRef.toLowerCase())){setNotice('That reference ID already exists. Enter a unique ID or leave it blank for an automatic ID.');return}
+    let generatedRef=requestedRef;
+    if(!editing&&!generatedRef){
+      const prefix=`NIM-${id.toUpperCase()}-`;
+      do{generatedRef=prefix+(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID().slice(0,8).toUpperCase():`${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`)}while(records.some(r=>String(r.ref).toLowerCase()===generatedRef.toLowerCase()));
+    }
+    const row={...draft,ref:editing||generatedRef,updated:'Nov 2026'};
     persist(editing?records.map(r=>r.ref===editing?row:r):[row,...records]);
     setShowForm(false);setNotice('Record saved in this browser prototype.');
   };
