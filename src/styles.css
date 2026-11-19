@@ -110,3 +110,10 @@ body{background:#f1f4f2}
   .nimis-map-large .nimis-map{min-height:300px}
   .map-source-note{max-width:62%;font-size:6px}
 }
+
+
+/* Tablet navigation and semantic workflow statuses */
+.status.neutral{background:#eef1ef;color:#68766e}.status.neutral i{background:#89968e}
+.status.red{background:#ffebed;color:#b74655}.status.red i{background:#c94d5c}
+@media (min-width:681px) and (max-width:900px){.sidebar{transform:translateX(0);width:166px}.main-area{margin-left:166px}.mobile-menu{display:none}.mobile-overlay{display:none}}
+@media(max-width:680px){.sidebar{width:235px}.main-area{margin-left:0}.mobile-menu{display:grid}}
