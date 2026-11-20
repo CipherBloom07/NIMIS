@@ -140,13 +140,13 @@ function ModulePage({id}) {
     const escapeCell=value=>{
       let text=String(value??'');
       // Prevent spreadsheet formula execution when exported user-entered values are opened.
-      if(/^[\\s]*[=+\\-@]/.test(text))text="'"+text;
+      if(/^[\s]*[=+\-@]/.test(text))text="'"+text;
       return `"${text.replaceAll('"','""')}"`;
     };
-    const csv=[columns.map(escapeCell).join(','),...filtered.map(record=>columns.map(key=>escapeCell(record[key])).join(','))].join('\\r\\n');
+    const csv=[columns.map(escapeCell).join(','),...filtered.map(record=>columns.map(key=>escapeCell(record[key])).join(','))].join('\r\n');
     let objectUrl;
     try{
-      objectUrl=URL.createObjectURL(new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8'}));
+      objectUrl=URL.createObjectURL(new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8'}));
       const link=document.createElement('a');
       link.href=objectUrl;
       link.download=`nimis-${id}-records.csv`;
@@ -198,10 +198,10 @@ function ReportsPage(){
   const exportCatalogue=()=>{
     const columns=['id','name','group','frequency','purpose','fields'];
     const cell=value=>'"'+String(value??'').replaceAll('"','""')+'"';
-    const csv=[columns.map(cell).join(','),...reportTemplates.map(row=>columns.map(key=>cell(row[key])).join(','))].join('\\r\\n');
+    const csv=[columns.map(cell).join(','),...reportTemplates.map(row=>columns.map(key=>cell(row[key])).join(','))].join('\r\n');
     let url;
     try{
-      url=URL.createObjectURL(new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8'}));
+      url=URL.createObjectURL(new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8'}));
       const link=document.createElement('a');link.href=url;link.download='NIMIS-report-catalogue.csv';
       document.body.appendChild(link);link.click();link.remove();
       window.setTimeout(()=>URL.revokeObjectURL(url),1500);

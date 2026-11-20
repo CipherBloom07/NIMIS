@@ -44,13 +44,13 @@ const csv=()=>{
  const cell=value=>{
   let text=String(value??'');
   // Treat user-entered values as text when opened in spreadsheet software.
-  if(/^[\\s]*[=+\\-@]/.test(text))text="'"+text;
+  if(/^[\s]*[=+\-@]/.test(text))text="'"+text;
   return '"'+text.replaceAll('"','""')+'"';
  };
  let url;
  try{
-  const out=[cols.map(cell).join(','),...rows.map(r=>cols.map(key=>cell(r[key])).join(','))].join('\\r\\n');
-  url=URL.createObjectURL(new Blob(['\\uFEFF',out],{type:'text/csv;charset=utf-8'}));
+  const out=[cols.map(cell).join(','),...rows.map(r=>cols.map(key=>cell(r[key])).join(','))].join('\r\n');
+  url=URL.createObjectURL(new Blob(['\uFEFF',out],{type:'text/csv;charset=utf-8'}));
   const link=document.createElement('a');
   link.href=url;link.download='NIMIS-scheme-registry.csv';link.style.display='none';
   document.body.appendChild(link);link.click();link.remove();
