@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import RegistryPage from './Registry.jsx';
 import DataManagement from './DataManagement.jsx';
+import {enqueueSyncChange} from './dataSync.js';
 import {
   LayoutDashboard, Map, Droplets, Wrench, Sprout, ClipboardList, Database, Upload,
   FileBarChart2, Search, Bell, ChevronDown, Menu, X, ArrowUpRight,
@@ -124,7 +125,7 @@ function ModulePage({id}) {
   const [draft,setDraft]=useState({ref:'',schemeId:'',name:'',province:'Manicaland',district:'',category:'',status:'Draft',detail:''});
   const [editing,setEditing]=useState('');
   const [notice,setNotice]=useState('');
-  const persist=next=>{setRecords(next);try{if(typeof window!=='undefined')window.localStorage.setItem(storageKey,JSON.stringify(next));}catch{setNotice('Browser storage is unavailable. Changes remain only for this session.')}};
+  const persist=next=>{setRecords(next);try{if(typeof window!=='undefined'){window.localStorage.setItem(storageKey,JSON.stringify(next));const before=new Map(records.map(r=>[r.ref,r]));const after=new Map(next.map(r=>[r.ref,r]));next.forEach(r=>{if(JSON.stringify(before.get(r.ref))!==JSON.stringify(r))enqueueSyncChange(id,'upsert',r)});records.forEach(r=>{if(!after.has(r.ref))enqueueSyncChange(id,'delete',{ref:r.ref,schemeId:r.schemeId})})}}catch{setNotice('Browser storage is unavailable. Changes remain only for this session.')}};
   const filtered=records.filter(r=>(status==='All statuses'||r.status===status)&&Object.values(r).some(v=>String(v??'').toLowerCase().includes(query.toLowerCase())));
   const openNew=()=>{setDraft({ref:'',schemeId:'',name:'',province:'Manicaland',district:'',category:'',status:'Draft',detail:''});setEditing('');setShowForm(true)};
   const openEdit=r=>{setDraft({...r,schemeId:r.schemeId||masterSchemes.find(s=>s.name===r.name)?.id||''});setEditing(r.ref);setShowForm(true)};
