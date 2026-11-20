@@ -103,6 +103,7 @@ function ModulePage({id}) {
     detail:id==='water'?'Source observation pending verification':id==='infrastructure'?'Condition assessment recorded':id==='agronomy'?'2026/27 season sample record':id==='projects'?'Milestone progress requires update':id==='gis'?'Coordinates require field confirmation':'Master profile sample record',
     updated:'Nov 2026'
   }));
+  const masterSchemes=useMemo(()=>{const base=schemes.map(s=>({id:s.id,name:s.name,province:s.province,district:s.district}));try{const saved=typeof window!=='undefined'?JSON.parse(window.localStorage.getItem('nimis-registry-v1')):null;return Array.isArray(saved)&&saved.length?saved.map(s=>({id:s.id,name:s.name,province:s.province,district:s.district})):base}catch{return base}} ,[]);
   const [records,setRecords]=useState(()=>{
     try{const saved=typeof window!=='undefined'?JSON.parse(window.localStorage.getItem(storageKey)):null;return Array.isArray(saved)?saved:initial}
     catch{return initial}
@@ -110,13 +111,13 @@ function ModulePage({id}) {
   const [query,setQuery]=useState('');
   const [status,setStatus]=useState('All statuses');
   const [showForm,setShowForm]=useState(false);
-  const [draft,setDraft]=useState({ref:'',name:'',province:'Manicaland',district:'',category:'',status:'Draft',detail:''});
+  const [draft,setDraft]=useState({ref:'',schemeId:'',name:'',province:'Manicaland',district:'',category:'',status:'Draft',detail:''});
   const [editing,setEditing]=useState('');
   const [notice,setNotice]=useState('');
   const persist=next=>{setRecords(next);try{if(typeof window!=='undefined')window.localStorage.setItem(storageKey,JSON.stringify(next));}catch{setNotice('Browser storage is unavailable. Changes remain only for this session.')}};
   const filtered=records.filter(r=>(status==='All statuses'||r.status===status)&&Object.values(r).some(v=>String(v??'').toLowerCase().includes(query.toLowerCase())));
-  const openNew=()=>{setDraft({ref:'',name:'',province:'Manicaland',district:'',category:'',status:'Draft',detail:''});setEditing('');setShowForm(true)};
-  const openEdit=r=>{setDraft({...r});setEditing(r.ref);setShowForm(true)};
+  const openNew=()=>{setDraft({ref:'',schemeId:'',name:'',province:'Manicaland',district:'',category:'',status:'Draft',detail:''});setEditing('');setShowForm(true)};
+  const openEdit=r=>{setDraft({...r,schemeId:r.schemeId||masterSchemes.find(s=>s.name===r.name)?.id||''});setEditing(r.ref);setShowForm(true)};
   const submit=e=>{
     e.preventDefault();
     if(!draft.name.trim()||!draft.district.trim()||!draft.category.trim()){setNotice('Complete the scheme name, district and record category.');return}
@@ -176,7 +177,8 @@ function ModulePage({id}) {
     </section>
     {notice&&<div className="data-note" role="status">{notice}<button style={{marginLeft:'auto',border:0,background:'transparent',color:'inherit'}} onClick={()=>setNotice('')}>Dismiss</button></div>}
     {showForm&&<div className="reg-modal-back" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setShowForm(false)}}><section className="reg-modal" role="dialog" aria-modal="true" aria-labelledby="module-form-title"><div className="reg-modal-head"><div><h2 id="module-form-title">{editing?'Edit record':`Add ${formTitle.toLowerCase()}`}</h2><p>Enter a prototype record. It will be saved only in this browser.</p></div><button className="reg-close" onClick={()=>setShowForm(false)} aria-label="Close"><X size={17}/></button></div><form onSubmit={submit}><div className="reg-form-grid">
-      <label className="reg-field"><span>Scheme / record name *</span><input required value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})}/></label>
+      <label className="reg-field"><span>Link to registered scheme</span><select value={draft.schemeId||''} onChange={e=>{const selected=masterSchemes.find(s=>s.id===e.target.value);setDraft({...draft,schemeId:e.target.value,name:selected?.name||draft.name,province:selected?.province||draft.province,district:selected?.district||draft.district})}}><option value="">Unlinked / manual entry</option>{masterSchemes.map(s=><option key={s.id} value={s.id}>{s.name} — {s.id}</option>)}</select></label>
+      <label className="reg-field"><span>Scheme / record name *</span><input required value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value,schemeId:''})}/></label>
       <label className="reg-field"><span>District *</span><input required value={draft.district} onChange={e=>setDraft({...draft,district:e.target.value})}/></label>
       <label className="reg-field"><span>Province</span><select value={draft.province} onChange={e=>setDraft({...draft,province:e.target.value})}>{['Bulawayo','Harare','Manicaland','Mashonaland Central','Mashonaland East','Mashonaland West','Masvingo','Matabeleland North','Matabeleland South','Midlands'].map(p=><option key={p}>{p}</option>)}</select></label>
       <label className="reg-field"><span>Record category *</span><input required value={draft.category} onChange={e=>setDraft({...draft,category:e.target.value})} placeholder={formTitle}/></label>
