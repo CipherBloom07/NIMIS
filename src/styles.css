@@ -171,3 +171,6 @@ body{background:#f1f4f2}
 .import-result strong{color:#24583b}.message-dismiss{margin-left:auto;border:0;background:transparent;color:inherit;font-size:10px;cursor:pointer}
 .spin{animation:nimis-spin 1s linear infinite}@keyframes nimis-spin{to{transform:rotate(360deg)}}
 @media(max-width:760px){.data-ops-grid{grid-template-columns:1fr}.data-ops-body{padding:11px}}
+
+.chart-empty-state{min-height:188px;padding:24px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:#829087}
+.chart-empty-state svg{color:#8ca99a}.chart-empty-state strong{font-size:12px;color:#405c4a}.chart-empty-state span{max-width:290px;font-size:10px;line-height:1.6}
