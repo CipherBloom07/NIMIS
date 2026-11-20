@@ -121,13 +121,16 @@ function ModulePage({id}) {
     e.preventDefault();
     if(!draft.name.trim()||!draft.district.trim()||!draft.category.trim()){setNotice('Complete the scheme name, district and record category.');return}
     const requestedRef=draft.ref.trim();
-    if(!editing&&requestedRef&&records.some(r=>String(r.ref).toLowerCase()===requestedRef.toLowerCase())){setNotice('That reference ID already exists. Enter a unique ID or leave it blank for an automatic ID.');return}
+    if(!editing&&requestedRef&&records.some(r=>String(r.ref).trim().toLowerCase()===requestedRef.toLowerCase())){setNotice('That reference ID already exists. Enter a unique ID or leave it blank for an automatic ID.');return}
     let generatedRef=requestedRef;
     if(!editing&&!generatedRef){
       const prefix=`NIM-${id.toUpperCase()}-`;
-      do{generatedRef=prefix+(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID().slice(0,8).toUpperCase():`${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`)}while(records.some(r=>String(r.ref).toLowerCase()===generatedRef.toLowerCase()));
+      do{
+        const token=typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID().slice(0,8).toUpperCase():`${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+        generatedRef=prefix+token;
+      }while(records.some(r=>String(r.ref).trim().toLowerCase()===generatedRef.toLowerCase()));
     }
-    const row={...draft,ref:editing||generatedRef,updated:'Nov 2026'};
+    const row={...draft,ref:editing||generatedRef,updated:new Date().toLocaleDateString('en-GB',{month:'short',year:'numeric'})};
     persist(editing?records.map(r=>r.ref===editing?row:r):[row,...records]);
     setShowForm(false);setNotice('Record saved in this browser prototype.');
   };
