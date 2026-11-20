@@ -1210,7 +1210,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .searchbox input::placeholder{color:var(--play-text-secondary)}
 .searchbox button{color:var(--play-text-secondary)}
 .connection-status{
-  min-height:32px;padding:6px 12px;gap:7px;
+  min-height:40px;padding:8px 14px;gap:7px;
   border:0;border-radius:var(--play-control-radius);
   background:var(--play-success-container);color:var(--play-success-text);
   font-size:13px;font-weight:600;
@@ -1336,6 +1336,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 table{min-width:720px}
 thead th{padding:14px 16px;border-color:var(--play-border);background:var(--play-surface);color:var(--play-text-secondary);font-size:13px;line-height:1.4;letter-spacing:0;font-weight:600}
 tbody td{padding:14px 16px;border-color:var(--play-border);color:var(--play-text);font-size:14px;line-height:1.45}
+.table-wrap thead th{font-size:13px}
+.table-wrap tbody td{font-size:14px}
 tbody tr:hover{background:#f8f9fa}
 .scheme-name{color:var(--play-text);font-size:14px}
 .scheme-name small{color:var(--play-text-secondary);font-size:12px}
