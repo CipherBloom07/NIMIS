@@ -1,0 +1,50 @@
+:root {
+  --play-font-family: "Google Sans", Roboto, Inter, system-ui, sans-serif;
+
+  --play-page: #ffffff;
+  --play-surface: #f8f9fa;
+  --play-surface-raised: #ffffff;
+  --play-border: #e8eaed;
+  --play-text: #1f1f1f;
+  --play-text-secondary: #5f6368;
+
+  --play-primary: #0f9d58;
+  --play-primary-hover: #0b8043;
+  --play-primary-container: #e6f4ea;
+  --play-on-primary: #1f1f1f;
+  --play-on-primary-hover: #ffffff;
+  --play-on-primary-container: #0b8043;
+
+  --play-success: #1e8e3e;
+  --play-success-text: #137333;
+  --play-success-container: #e6f4ea;
+  --play-warning: #f9ab00;
+  --play-warning-text: #8a5b00;
+  --play-warning-container: #fef7e0;
+  --play-error: #d93025;
+  --play-error-container: #fce8e6;
+  --play-info: #1a73e8;
+  --play-info-container: #e8f0fe;
+
+  --play-title-size: 32px;
+  --play-section-title-size: 24px;
+  --play-card-title-size: 18px;
+  --play-body-size: 16px;
+  --play-label-size: 14px;
+  --play-caption-size: 13px;
+  --play-min-text-size: 12px;
+
+  --play-space-1: 8px;
+  --play-space-2: 16px;
+  --play-space-3: 24px;
+  --play-space-4: 32px;
+
+  --play-card-radius: 24px;
+  --play-control-radius: 999px;
+  --play-icon-radius: 22%;
+  --play-card-padding: 24px;
+
+  --play-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --play-card-shadow-hover: 0 5px 16px rgba(60, 64, 67, 0.14);
+  --play-transition: 180ms ease;
+}
