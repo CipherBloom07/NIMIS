@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import './styles.css';
 
+if ('storage' in navigator && navigator.storage?.persist) {
+  navigator.storage.persist().catch(() => false);
+}
+
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);
 
 if ('serviceWorker' in navigator) {
