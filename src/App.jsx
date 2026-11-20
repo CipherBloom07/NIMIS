@@ -96,15 +96,74 @@ function Dashboard({ onSelect }) {
   <section className="dashboard-summary panel"><div><div className="eyebrow">SCHEME MASTER REGISTER · LOCAL RECORDS</div><strong style={{fontSize:20}}>{number(registry.length)} registered schemes</strong><p className="subtitle" style={{margin:"4px 0 0"}}>Totals update when scheme records are added, edited or imported.</p></div><button className="ghost-btn" onClick={()=>onSelect("registry")}>Open Scheme Registry <ArrowUpRight size={15}/></button></section>
   <div className="kpi-grid">{dynamicKpis.map(k=><KPI key={k.title} item={k}/>)}</div>
   <div className="status-kpi-grid">{summaryStatus.map(([label,value,tint])=><div className="status-kpi" key={label}><span className={'status-kpi-icon '+tint}><CircleDot size={15}/></span><div><small>{label}</small><strong>{number(value)}</strong></div></div>)}</div>
-  <div className="dash-grid">
-   <section className="panel"><div className="panel-head"><div><h2>Irrigated Area Trend (ha)</h2><p>Historical reporting series · populated from dated, verified records</p></div><span className="map-layer-label">History</span></div><div className="chart-empty-state"><Activity size={24}/><strong>No historical series available</strong><span>Trend analysis will appear when reporting-period records are entered and verified.</span></div></section>
-   <section className="panel"><div className="panel-head"><div><h2>Irrigated Area by Programme</h2><p>Programme allocation · requires classified scheme records</p></div></div><div className="chart-empty-state"><Database size={24}/><strong>No programme breakdown available</strong><span>Add programme classifications to scheme records to populate this analysis.</span></div></section>
-  </div>
+  <DashboardVisuals records={registry} totals={totals} format={number}/>
   <section className="panel schemes-panel"><div className="panel-head"><div><h2>Registered scheme records</h2><p>Master records currently available in this browser</p></div><button className="ghost-btn" onClick={()=>onSelect('registry')}>View registry <ArrowUpRight size={15}/></button></div>{registry.length?<SchemesTable rows={registry.slice(0,8).map(s=>({id:s.id,name:s.name,province:s.province,area:(Number(s.developed)||0).toLocaleString()+' ha',status:s.status||'Not recorded',water:s.water||'Not recorded',pct:Number(s.developed)>0?Math.round((Number(s.irrigated)||0)/Number(s.developed)*100):0}))}/>:<div className="reg-empty">No scheme records are stored in this browser yet. Register or import schemes to populate the dashboard.</div>}</section>
   <div className="bottom-grid"><section className="panel activity-panel"><div className="panel-head"><div><h2>Data coverage</h2><p>Completeness of the local master register</p></div></div><div className="activity-items"><div className="activity-item"><span className="activity-icon green"><ShieldCheck size={16}/></span><div><strong>{registry.filter(r=>r.dataStatus==='Verified').length} verified scheme records</strong><p>Records explicitly marked verified</p></div></div><div className="activity-item"><span className="activity-icon blue"><Database size={16}/></span><div><strong>{registry.filter(r=>!r.water||r.developed===''||r.equipped===''||r.irrigated==='').length} incomplete profiles</strong><p>Missing water or area information</p></div></div></div></section><section className="panel quick-panel"><div className="panel-head"><div><h2>Quick access</h2><p>Common system workspaces</p></div></div><div className="quick-links"><button onClick={()=>onSelect('registry')}><Database size={17}/><span>Scheme registry</span><ArrowUpRight size={14}/></button><button onClick={()=>onSelect('data')}><Upload size={17}/><span>Data management</span><ArrowUpRight size={14}/></button><button onClick={()=>onSelect('reports')}><FileBarChart2 size={17}/><span>Reports & analytics</span><ArrowUpRight size={14}/></button></div></section></div>
  </>;
 }
 function SchemesTable({rows}) { return <div className="table-wrap"><table><thead><tr><th>Scheme / ID</th><th>Province</th><th>Developed area</th><th>Operational status</th><th>Water status</th><th>Readiness</th></tr></thead><tbody>{rows.map(s=><tr key={s.id}><td><div className="scheme-name">{s.name}<small>{s.id}</small></div></td><td>{s.province}</td><td>{s.area}</td><td><Status label={s.status}/></td><td><Status label={s.water}/></td><td><div className="readiness"><span className="readiness-track"><i style={{width:`${s.pct}%`}}/></span><b>{s.pct}%</b></div></td></tr>)}</tbody></table></div>; }
+function ModuleInsights({id,records}) {
+  const headings={
+    gis:['Spatial coverage by province','Location review status'],
+    water:['Water records by source','Water observation status'],
+    infrastructure:['Assets by category','Condition review status'],
+    agronomy:['Crop records by category','Verification status'],
+    projects:['Project portfolio by type','Delivery workflow status'],
+  }[id]||['Records by category','Workflow status'];
+  const categories=Object.entries(records.reduce((counts,record)=>{
+    const category=String(record.category||'Unclassified');
+    counts[category]=(counts[category]||0)+1;
+    return counts;
+  },{})).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const statuses=Object.entries(records.reduce((counts,record)=>{
+    const status=String(record.status||'Not recorded');
+    counts[status]=(counts[status]||0)+1;
+    return counts;
+  },{})).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxCategory=Math.max(1,...categories.map(([,count])=>count));
+  const total=records.length||1;
+  return <div className="module-insights">
+    <section className="panel insight-panel">
+      <div className="panel-head"><div><h2>{headings[0]}</h2><p>Counts calculated from records in this browser</p></div><Activity size={17}/></div>
+      {categories.length?<div className="insight-list">{categories.map(([label,count])=><div className="insight-row" key={label}><div><span>{label}</span><strong>{count}</strong></div><div className="insight-track"><i style={{width:`${count/maxCategory*100}%`}}/></div></div>)}</div>:<div className="reg-empty">No categorized records yet.</div>}
+    </section>
+    <section className="panel insight-panel">
+      <div className="panel-head"><div><h2>{headings[1]}</h2><p>Current local workflow distribution</p></div><CircleDot size={17}/></div>
+      {statuses.length?<><div className="workflow-total"><strong>{records.length}</strong><span>local records</span></div><div className="workflow-stack" aria-label="Workflow status distribution">{statuses.map(([label,count],index)=><i key={label} className={`workflow-segment segment-${index}`} style={{width:`${count/total*100}%`}} title={`${label}: ${count}`}/>)}</div><div className="workflow-legend">{statuses.map(([label,count],index)=><div key={label}><i className={`segment-${index}`}/><span>{label}</span><strong>{count}</strong></div>)}</div></>:<div className="reg-empty">No workflow information is available.</div>}
+    </section>
+  </div>;
+}
+function DashboardVisuals({records,totals,format}) {
+  const stages=[
+    ['Developed area',totals.developed,'#08783e'],
+    ['Equipped area',totals.equipped,'#368ab3'],
+    ['Currently irrigated',totals.irrigated,'#d8a91c'],
+  ];
+  const maxArea=Math.max(1,...stages.map(([,value])=>value));
+  const provinceTotals=Object.entries(records.reduce((result,record)=>{
+    const province=String(record.province||'Not recorded');
+    result[province]=(result[province]||0)+(Number(record.irrigated)||0);
+    return result;
+  },{})).filter(([,value])=>value>0).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const totalIrrigated=provinceTotals.reduce((sum,[,value])=>sum+value,0);
+  const palette=['#08783e','#368ab3','#d8a91c','#8c79c8','#c9544d'];
+  let cursor=0;
+  const gradient=provinceTotals.map(([,value],index)=>{
+    const start=cursor;
+    cursor+=value/totalIrrigated*100;
+    return `${palette[index]} ${start}% ${cursor}%`;
+  }).join(',');
+  return <div className="dash-grid dashboard-visuals">
+    <section className="panel">
+      <div className="panel-head"><div><h2>Area progression (ha)</h2><p>Developed, equipped and irrigated totals from local scheme records</p></div><Activity size={17}/></div>
+      {records.length?<div className="area-chart">{stages.map(([label,value,color])=><div className="area-chart-row" key={label}><div><span>{label}</span><strong>{format(value)}</strong></div><div className="insight-track"><i style={{width:`${value/maxArea*100}%`,background:color}}/></div></div>)}</div>:<div className="chart-empty-state"><Activity size={24}/><strong>No scheme area records</strong><span>Area comparisons will appear when scheme figures are entered.</span></div>}
+    </section>
+    <section className="panel">
+      <div className="panel-head"><div><h2>Irrigated area by province</h2><p>Distribution calculated from local scheme records</p></div><MapPin size={17}/></div>
+      {totalIrrigated>0?<div className="province-chart"><div className="province-donut" style={{background:`conic-gradient(${gradient})`}}><div><strong>{format(totalIrrigated)}</strong><small>ha recorded</small></div></div><div className="province-chart-legend">{provinceTotals.map(([province,value],index)=><div key={province}><i style={{background:palette[index]}}/><span>{province}</span><strong>{format(value)}</strong></div>)}</div></div>:<div className="chart-empty-state"><MapPin size={24}/><strong>No provincial breakdown</strong><span>Enter irrigated area and province for a scheme to show the distribution.</span></div>}
+    </section>
+  </div>;
+}
 function ModulePage({id}) {
   const m=moduleDescriptions[id] || moduleDescriptions.reports;
   const storageKey=`nimis-module-${id}-v1`;
@@ -182,6 +241,7 @@ function ModulePage({id}) {
     <div className="data-note"><CircleHelp size={15}/><span><strong>Prototype records</strong> — sample information is illustrative, stored locally in this browser and is not connected to a national database.</span></div>
     <div className="kpi-grid module-kpis">{m.cards.map(([title],i)=><div className="kpi-card" key={title}><div className="kpi-top"><span className={`kpi-icon ${['green','gold','blue'][i]}`}><Activity size={18}/></span></div><div className="kpi-label">{title}</div><div className="kpi-value">{moduleStats[i].toLocaleString()}</div><div className="kpi-note">Calculated from local workspace records</div></div>)}</div>
     {id==='gis'&&<section className="panel gis-map-panel"><div className="panel-head"><div><h2>National scheme map</h2><p>Pan, zoom and select a point to inspect the illustrative scheme record.</p></div><span className="map-layer-label">OpenStreetMap · Street layer</span></div><ZimbabweMap/></section>}
+    <ModuleInsights id={id} records={records}/>
     <section className="panel schemes-panel">
       <div className="panel-head"><div><h2>{recordTitle}</h2><p>{filtered.length} records displayed · linked to scheme references</p></div><div className="panel-actions"><button className="ghost-btn" onClick={exportCsv}><Download size={14}/> Export CSV</button><button className="reg-primary" onClick={openNew}>+ Add record</button></div></div>
       <div className="reg-toolbar"><div className="reg-search"><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, scheme ID, district..."/></div><select value={status} onChange={e=>setStatus(e.target.value)}><option>All statuses</option>{['Draft','Submitted','Under review','Verified','Approved','Attention required'].map(s=><option key={s}>{s}</option>)}</select></div>
