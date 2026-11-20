@@ -210,3 +210,19 @@ body{background:#f1f4f2}
 .status-kpi-icon.green{background:#e8f1eb;color:var(--nimis-green)}
 .status-kpi-icon.blue{background:#edf2f7;color:var(--nimis-navy)}
 @media(max-width:900px){.brand-mark{width:36px;height:36px;min-width:36px}}
+
+/* One primary UI colour; reserve secondary hues for meaningful statuses only. */
+.kpi-icon.green,.kpi-icon.gold,.kpi-icon.blue,.kpi-icon.cyan,
+.activity-icon.green,.activity-icon.blue,.activity-icon.amber,
+.placeholder-icon{
+  background:#e8f1eb!important;
+  color:#075b3a!important;
+}
+.kpi-card,.panel,.reg-summary>div{box-shadow:none}
+.kpi-card,.panel{border-radius:6px}
+.reg-summary>div{border-radius:6px}
+.status-kpi-icon.green{background:#e8f1eb;color:#075b3a}
+.status-kpi-icon.blue{background:#edf2f7;color:#17456f}
+.status-kpi-icon.amber{background:#fbf3df;color:#9a7620}
+.status-kpi-icon.cyan{background:#edf2f7;color:#17456f}
+.status-kpi-icon.red{background:#faeceb;color:#b33a35}
