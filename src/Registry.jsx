@@ -1,4 +1,4 @@
-import React,{useState,useMemo} from 'react';
+import React,{useState,useMemo,useEffect} from 'react';
 import {enqueueSyncChange} from './dataSync.js';
 import {Search,Plus,Download,Pencil,Trash2,X} from 'lucide-react';
 const seed=[
@@ -10,9 +10,10 @@ const seed=[
 const key='nimis-registry-v1',provinces=['Bulawayo','Harare','Manicaland','Mashonaland Central','Mashonaland East','Mashonaland West','Masvingo','Matabeleland North','Matabeleland South','Midlands'];
 const empty={name:'',province:'Manicaland',district:'',water:'',status:'Operational',developed:'',equipped:'',irrigated:''};
 export default function RegistryPage(){
+useEffect(()=>{try{if(!localStorage.getItem(key)){localStorage.setItem(key,JSON.stringify(seed));window.dispatchEvent(new Event('nimis-registry-updated'))}}catch{}},[]);
 const[records,setRecords]=useState(()=>{try{if(typeof window==='undefined')return seed;const data=JSON.parse(window.localStorage.getItem(key));return Array.isArray(data)?data:seed}catch{return seed}});
 const[q,setQ]=useState(''),[province,setProvince]=useState('All provinces'),[status,setStatus]=useState('All statuses'),[form,setForm]=useState(empty),[editing,setEditing]=useState(''),[show,setShow]=useState(false);
-const save=data=>{setRecords(data);try{if(typeof window!=='undefined'){window.localStorage.setItem(key,JSON.stringify(data));const before=new Map(records.map(r=>[r.id,r]));const after=new Map(data.map(r=>[r.id,r]));data.forEach(r=>{if(JSON.stringify(before.get(r.id))!==JSON.stringify(r))enqueueSyncChange('scheme','upsert',r)});records.forEach(r=>{if(!after.has(r.id))enqueueSyncChange('scheme','delete',{id:r.id})})}}catch{}};
+const save=data=>{setRecords(data);try{if(typeof window!=='undefined'){window.localStorage.setItem(key,JSON.stringify(data));window.dispatchEvent(new Event('nimis-registry-updated'));const before=new Map(records.map(r=>[r.id,r]));const after=new Map(data.map(r=>[r.id,r]));data.forEach(r=>{if(JSON.stringify(before.get(r.id))!==JSON.stringify(r))enqueueSyncChange('scheme','upsert',r)});records.forEach(r=>{if(!after.has(r.id))enqueueSyncChange('scheme','delete',{id:r.id})})}}catch{}};
 const rows=useMemo(()=>records.filter(r=>(province==='All provinces'||r.province===province)&&(status==='All statuses'||r.status===status)&&Object.values(r).some(v=>String(v??'').toLowerCase().includes(q.toLowerCase()))),[records,q,province,status]);
 const totals = records.reduce(
   (total, record) => ({
