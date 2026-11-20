@@ -31,13 +31,6 @@ const schemes = [
   { name: 'Mushandike', province: 'Masvingo', district: 'Masvingo', area: '1,125 ha', status: 'Operational', pct: 94, water: 'Stable', crop: 'Maize · Horticulture', id: 'NIM-MAS-002' },
   { name: 'Nyanyadzi', province: 'Manicaland', district: 'Nyanyadzi', area: '560 ha', status: 'Operational', pct: 62, water: 'Watch', crop: 'Horticulture', id: 'NIM-MAN-022' },
 ];
-const kpis = [
-  { title: 'Currently irrigated area', value: '305,121 ha', note: 'Reported irrigated area', trend: '+2.4%', up: true, icon: Sprout, tint: 'green' },
-  { title: '2030 National Target', value: '496,000 ha', note: 'National irrigation target', trend: 'Target', up: true, icon: TrendingUp, tint: 'blue' },
-  { title: 'Progress to target', value: '61.5%', note: 'Target achievement', trend: '+1.2%', up: true, icon: Activity, tint: 'cyan' },
-  { title: 'Remaining to target', value: '190,879 ha', note: 'Area gap to target', trend: 'Gap', up: false, icon: MapPin, tint: 'gold' },
-];
-const provinceData = [ ['Mashonaland West',86], ['Manicaland',73], ['Mashonaland East',69], ['Masvingo',64], ['Midlands',58], ['Mashonaland Central',53], ['Matabeleland South',45], ['Matabeleland North',39], ['Harare',22], ['Bulawayo',17] ];
 const moduleDescriptions = {
   gis:{eyebrow:'MONITORING / GEOSPATIAL',title:'GIS & Spatial Mapping',description:'Explore verified scheme locations, geographic coverage and spatial context across Zimbabwe.',cards:[['Spatial records',''],['Coordinates complete',''],['Location reviews','']],tableTitle:'Scheme location overview'},
   water:{eyebrow:'MONITORING / WATER',title:'Water Resources & Hydrology',description:'Capture water sources, availability, abstraction context and seasonal observations.',cards:[['Water records',''],['Pending review',''],['Reporting periods','']],tableTitle:'Water source records'},
@@ -88,7 +81,7 @@ function Dashboard({ onSelect }) {
  const [registry,setRegistry]=useState(()=>{try{const value=JSON.parse(window.localStorage.getItem('nimis-registry-v1')||'null');return Array.isArray(value)?value:[]}catch{return[]}});
  useEffect(()=>{const refresh=()=>{try{const value=JSON.parse(window.localStorage.getItem('nimis-registry-v1')||'[]');setRegistry(Array.isArray(value)?value:[])}catch{setRegistry([])}};window.addEventListener('storage',refresh);window.addEventListener('nimis-registry-updated',refresh);return()=>{window.removeEventListener('storage',refresh);window.removeEventListener('nimis-registry-updated',refresh)}},[]);
  const totals=registry.reduce((a,r)=>({developed:a.developed+(Number(r.developed)||0),equipped:a.equipped+(Number(r.equipped)||0),irrigated:a.irrigated+(Number(r.irrigated)||0)}),{developed:0,equipped:0,irrigated:0});
- const countStatus=label=>registry.filter(r=>String(r.status||'').toLowerCase().includes(label)).length;
+ const countStatus=label=>registry.filter(r=>String(r.status||'').trim().toLowerCase()===label).length;
  const number=n=>n.toLocaleString('en-ZW',{maximumFractionDigits:1});
  const dynamicKpis=[
   {title:'Registered schemes',value:number(registry.length),note:'Records in the local master register',trend:'Registry',up:true,icon:Database,tint:'green'},
