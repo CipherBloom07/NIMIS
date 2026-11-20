@@ -137,3 +137,24 @@ body{background:#f1f4f2}
   .top-user{gap:4px;font-size:9px}
   .content-wrap{padding:12px 10px}
 }
+
+
+/* Executive dashboard reference-screen charts */
+.trend-chart{display:flex;gap:8px;padding:4px 12px 10px;height:188px}
+.trend-y-labels{display:flex;flex-direction:column;justify-content:space-between;padding:4px 0 24px;color:#87958c;font-size:8px}
+.trend-plot{position:relative;flex:1;min-width:0}
+.trend-gridlines{position:absolute;inset:5px 0 26px;display:flex;flex-direction:column;justify-content:space-between}
+.trend-gridlines i{display:block;border-top:1px dashed #e5ebe7}
+.trend-plot svg{position:absolute;inset:5px 0 25px;width:100%;height:calc(100% - 30px);overflow:visible}
+.trend-x-labels{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;color:#87958c;font-size:8px}
+.programme-chart{display:flex;align-items:center;justify-content:center;gap:22px;padding:16px 12px 20px;min-height:158px}
+.programme-donut{width:126px;height:126px;flex:0 0 126px;border-radius:50%;background:conic-gradient(#17885c 0 48%,#349ac4 48% 74%,#e6a13b 74% 94%,#8c79c8 94% 100%);display:grid;place-items:center}
+.programme-donut:before{content:"";grid-area:1/1;width:82px;height:82px;background:#fff;border-radius:50%}
+.programme-donut>div{grid-area:1/1;z-index:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.programme-donut strong{font-size:15px;color:#214a35}.programme-donut small{font-size:8px;color:#829087}
+.programme-legend{display:flex;flex-direction:column;gap:10px;min-width:130px}
+.programme-legend>div{display:grid;grid-template-columns:9px minmax(70px,1fr) auto;align-items:center;gap:6px;font-size:8px;color:#66766c}
+.programme-legend i{width:8px;height:8px;border-radius:2px}
+.programme-legend b{color:#2d4938;font-size:8px}
+.programme-a{background:#17885c}.programme-b{background:#349ac4}.programme-c{background:#e6a13b}.programme-d{background:#8c79c8}
+@media(max-width:680px){.programme-chart{gap:14px;padding:12px 8px}.programme-donut{width:112px;height:112px;flex-basis:112px}.programme-donut:before{width:74px;height:74px}.programme-legend{min-width:118px}.trend-chart{height:170px}}
