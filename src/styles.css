@@ -123,3 +123,17 @@ body{background:#f1f4f2}
 .report-select{border:0;background:transparent;color:#176b48;font:inherit;font-weight:700;text-align:left;padding:4px 0;cursor:pointer}
 .report-select:hover,.report-select:focus-visible{text-decoration:underline;outline-offset:3px}
 .report-select[aria-pressed="true"]{color:#0b4f35}
+
+
+/* Keep the compact tablet header readable without hiding ministry context. */
+@media (min-width:681px) and (max-width:900px){
+  .topbar{padding:0 10px;gap:8px}
+  .ministry-brand{padding-left:4px;flex:1 1 auto;min-width:0}
+  .ministry-brand strong{font-size:7px;line-height:1.25;white-space:normal}
+  .ministry-brand span{font-size:6px}
+  .breadcrumb{flex:0 0 auto;gap:5px;font-size:8px}
+  .top-actions{flex:0 1 auto;gap:5px;min-width:0}
+  .searchbox{width:118px;flex:0 1 118px}
+  .top-user{gap:4px;font-size:9px}
+  .content-wrap{padding:12px 10px}
+}
