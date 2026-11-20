@@ -97,7 +97,7 @@ function ModulePage({id}) {
   const m=moduleDescriptions[id] || moduleDescriptions.reports;
   const storageKey=`nimis-module-${id}-v1`;
   const initial=schemes.map((s,i)=>({
-    ref:s.id,name:s.name,province:s.province,district:s.district,
+    ref:s.id,schemeId:s.id,name:s.name,province:s.province,district:s.district,
     category:id==='water'?'Dam / river source':id==='infrastructure'?'Conveyance system':id==='agronomy'?'Maize':id==='projects'?'Rehabilitation':id==='gis'?'Scheme location':'Scheme profile',
     status:i===2?'Under review':i===4?'Attention required':'Verified',
     detail:id==='water'?'Source observation pending verification':id==='infrastructure'?'Condition assessment recorded':id==='agronomy'?'2026/27 season sample record':id==='projects'?'Milestone progress requires update':id==='gis'?'Coordinates require field confirmation':'Master profile sample record',
@@ -137,7 +137,7 @@ function ModulePage({id}) {
   };
   const remove=ref=>{if(window.confirm('Delete this local prototype record?'))persist(records.filter(r=>r.ref!==ref))};
   const exportCsv=()=>{
-    const columns=['ref','name','province','district','category','status','detail','updated'];
+    const columns=['ref','schemeId','name','province','district','category','status','detail','updated'];
     const escapeCell=value=>{
       let text=String(value??'');
       // Prevent spreadsheet formula execution when exported user-entered values are opened.
@@ -172,7 +172,7 @@ function ModulePage({id}) {
     <section className="panel schemes-panel">
       <div className="panel-head"><div><h2>{recordTitle}</h2><p>{filtered.length} records displayed · linked to scheme references</p></div><div className="panel-actions"><button className="ghost-btn" onClick={exportCsv}><Download size={14}/> Export CSV</button><button className="reg-primary" onClick={openNew}>+ Add record</button></div></div>
       <div className="reg-toolbar"><div className="reg-search"><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, scheme ID, district..."/></div><select value={status} onChange={e=>setStatus(e.target.value)}><option>All statuses</option>{['Draft','Submitted','Under review','Verified','Approved','Attention required'].map(s=><option key={s}>{s}</option>)}</select></div>
-      {filtered.length?<div className="table-wrap"><table><thead><tr><th>Scheme / record ID</th><th>Scheme / record</th><th>Province / district</th><th>Category</th><th>Status</th><th>Record detail</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{filtered.map(r=><tr key={r.ref}><td>{r.ref}</td><td><div className="scheme-name">{r.name}</div></td><td>{r.province}<small style={{display:'block',color:'#98a49c'}}>{r.district}</small></td><td>{r.category}</td><td><Status label={r.status}/></td><td>{r.detail}</td><td>{r.updated}</td><td><div className="reg-actions"><button aria-label="Edit record" title="Edit record" onClick={()=>openEdit(r)}><Pencil size={13}/></button><button aria-label="Delete record" title="Delete local record" onClick={()=>remove(r.ref)}><Trash2 size={13}/></button></div></td></tr>)}</tbody></table></div>:<div className="reg-empty">No matching records. Change the search or add a record.</div>}
+      {filtered.length?<div className="table-wrap"><table><thead><tr><th>Record ID</th><th>Scheme ID</th><th>Scheme / record</th><th>Province / district</th><th>Category</th><th>Status</th><th>Record detail</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{filtered.map(r=><tr key={r.ref}><td>{r.ref}</td><td>{r.schemeId||'—'}</td><td><div className="scheme-name">{r.name}</div></td><td>{r.province}<small style={{display:'block',color:'#98a49c'}}>{r.district}</small></td><td>{r.category}</td><td><Status label={r.status}/></td><td>{r.detail}</td><td>{r.updated}</td><td><div className="reg-actions"><button aria-label="Edit record" title="Edit record" onClick={()=>openEdit(r)}><Pencil size={13}/></button><button aria-label="Delete record" title="Delete local record" onClick={()=>remove(r.ref)}><Trash2 size={13}/></button></div></td></tr>)}</tbody></table></div>:<div className="reg-empty">No matching records. Change the search or add a record.</div>}
       <div className="reg-foot">Workflow readiness: Capture → Verify → Review → Technical approval → Publish. Approval permissions and shared database integration are not yet connected.</div>
     </section>
     {notice&&<div className="data-note" role="status">{notice}<button style={{marginLeft:'auto',border:0,background:'transparent',color:'inherit'}} onClick={()=>setNotice('')}>Dismiss</button></div>}
