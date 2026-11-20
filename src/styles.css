@@ -855,3 +855,51 @@ button,input,select,textarea{font:inherit}
  .sidebar{width:254px!important}
  .main-area{margin-left:254px!important;width:calc(100% - 254px)!important}
 }
+
+
+/* Zimbabwe Coat of Arms palette — executive, restrained, consistent */
+:root{
+ --nimis-green:#08783E;
+ --nimis-green-dark:#075A32;
+ --nimis-green-deep:#103B2A;
+ --nimis-green-tint:#E8F2EB;
+ --nimis-blue:#174A78;
+ --nimis-blue-tint:#EAF1F7;
+ --nimis-gold:#C89E19;
+ --nimis-gold-tint:#F8F1DD;
+ --nimis-red:#C9332B;
+ --nimis-red-tint:#F9EAE8;
+ --nimis-neutral:#F3F5F3;
+ --nimis-white:#FFFFFF;
+ --nimis-ink:#26352D;
+ --nimis-muted:#68776F;
+ --nimis-border:#DCE4DE;
+}
+body,.main-area,.content-wrap{background:var(--nimis-neutral);color:var(--nimis-ink)}
+.sidebar{background:var(--nimis-green-deep);color:#fff}
+.brand{background:var(--nimis-green-dark)}
+.brand-mark{background:#fff;border:1px solid #d6e2d9;border-radius:4px}
+.nav-heading{color:#9DB9A9}
+.nav-item{color:#D0DED5}
+.nav-item:hover{background:#ffffff10;color:#fff}
+.nav-item.active{background:#E8F2EB;color:var(--nimis-green-dark);box-shadow:inset 3px 0 var(--nimis-green)}
+.nav-item.active svg{color:var(--nimis-green-dark)}
+.nav-active-dot{background:var(--nimis-green)}
+.sidebar-bottom{border-top-color:#ffffff20}
+.user-card{background:#ffffff0b;border-color:#ffffff17}
+.user-avatar{background:var(--nimis-green-tint);color:var(--nimis-green-dark)}
+.topbar{background:#fff;border-bottom-color:var(--nimis-border);color:var(--nimis-ink)}
+.ministry-brand strong{color:var(--nimis-green-dark)}
+.reg-primary,.primary-btn,.btn-primary{background:var(--nimis-green);border-color:var(--nimis-green);color:#fff}
+.reg-primary:hover,.primary-btn:hover,.btn-primary:hover{background:var(--nimis-green-dark);border-color:var(--nimis-green-dark)}
+a,.link,.text-link{color:var(--nimis-blue)}
+.kpi-icon.green,.activity-icon.green,.status-kpi-icon.green{background:var(--nimis-green-tint)!important;color:var(--nimis-green-dark)!important}
+.kpi-icon.blue,.activity-icon.blue,.status-kpi-icon.blue{background:var(--nimis-blue-tint)!important;color:var(--nimis-blue)!important}
+.kpi-icon.gold,.activity-icon.amber,.status-kpi-icon.amber{background:var(--nimis-gold-tint)!important;color:#85650B!important}
+.status-kpi-icon.red{background:var(--nimis-red-tint)!important;color:var(--nimis-red)!important}
+.data-note,.sync-explainer{border-left-color:var(--nimis-green)}
+.table-wrap thead th{background:#F4F7F4}
+.status.success,.status.verified{background:var(--nimis-green-tint);color:var(--nimis-green-dark)}
+.status.warning,.status.pending{background:var(--nimis-gold-tint);color:#85650B}
+.status.error,.status.rejected{background:var(--nimis-red-tint);color:var(--nimis-red)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--nimis-blue);outline-offset:2px}
