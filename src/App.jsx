@@ -133,6 +133,7 @@ function ModulePage({id}) {
   const [draft,setDraft]=useState({ref:'',schemeId:'',name:'',province:'Manicaland',district:'',category:'',status:'Draft',detail:''});
   const [editing,setEditing]=useState('');
   const [notice,setNotice]=useState('');
+  const moduleStats=[records.length,records.filter(r=>/review|attention|draft|submitted/i.test(r.status||'')).length,records.filter(r=>r.schemeId).length];
   const persist=next=>{setRecords(next);try{if(typeof window!=='undefined'){window.localStorage.setItem(storageKey,JSON.stringify(next));const before=new Map(records.map(r=>[r.ref,r]));const after=new Map(next.map(r=>[r.ref,r]));next.forEach(r=>{if(JSON.stringify(before.get(r.ref))!==JSON.stringify(r))enqueueSyncChange(id,'upsert',r)});records.forEach(r=>{if(!after.has(r.ref))enqueueSyncChange(id,'delete',{ref:r.ref,schemeId:r.schemeId})})}}catch{setNotice('Browser storage is unavailable. Changes remain only for this session.')}};
   const filtered=records.filter(r=>(status==='All statuses'||r.status===status)&&Object.values(r).some(v=>String(v??'').toLowerCase().includes(query.toLowerCase())));
   const openNew=()=>{setDraft({ref:'',schemeId:'',name:'',province:'Manicaland',district:'',category:'',status:'Draft',detail:''});setEditing('');setShowForm(true)};
@@ -186,7 +187,7 @@ function ModulePage({id}) {
   return <div className="module-page">
     <div className="welcome-row"><div><div className="eyebrow">{m.eyebrow}</div><h1>{m.title}</h1><p className="subtitle">{m.description}</p></div><div className="period-select"><CalendarDays size={15}/> Reporting cycle <strong>Nov 2026</strong></div></div>
     <div className="data-note"><CircleHelp size={15}/><span><strong>Prototype records</strong> — sample information is illustrative, stored locally in this browser and is not connected to a national database.</span></div>
-    <div className="kpi-grid module-kpis">{m.cards.map(([title,value],i)=><div className="kpi-card" key={title}><div className="kpi-top"><span className={`kpi-icon ${['green','gold','blue'][i]}`}><Activity size={18}/></span></div><div className="kpi-label">{title}</div><div className="kpi-value">{value}</div><div className="kpi-note">Illustrative summary · not verified</div></div>)}</div>
+    <div className="kpi-grid module-kpis">{m.cards.map(([title],i)=><div className="kpi-card" key={title}><div className="kpi-top"><span className={`kpi-icon ${['green','gold','blue'][i]}`}><Activity size={18}/></span></div><div className="kpi-label">{title}</div><div className="kpi-value">{moduleStats[i].toLocaleString()}</div><div className="kpi-note">Calculated from local workspace records</div></div>)}</div>
     {id==='gis'&&<section className="panel gis-map-panel"><div className="panel-head"><div><h2>National scheme map</h2><p>Pan, zoom and select a point to inspect the illustrative scheme record.</p></div><span className="map-layer-label">OpenStreetMap · Street layer</span></div><ZimbabweMap/></section>}
     <section className="panel schemes-panel">
       <div className="panel-head"><div><h2>{recordTitle}</h2><p>{filtered.length} records displayed · linked to scheme references</p></div><div className="panel-actions"><button className="ghost-btn" onClick={exportCsv}><Download size={14}/> Export CSV</button><button className="reg-primary" onClick={openNew}>+ Add record</button></div></div>
