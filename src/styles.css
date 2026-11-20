@@ -180,3 +180,33 @@ body{background:#f1f4f2}
 .connection-status.offline i{background:#ffd28a}
 .connection-status b{font-weight:600;padding-left:5px;border-left:1px solid #ffffff55}
 @media(max-width:680px){.connection-status{font-size:9px;padding:5px 7px}.connection-status b{display:none}}
+
+/* Zimbabwe national identity: restrained NIMIS application palette */
+:root{
+  --nimis-green:#075b3a;
+  --nimis-green-deep:#06472f;
+  --nimis-green-soft:#e8f1eb;
+  --nimis-navy:#17456f;
+  --nimis-red:#ed2b24;
+  --nimis-gold:#e5bd28;
+  --nimis-workspace:#f2f5f3;
+  --nimis-border:#dfe7e2;
+}
+.brand-mark{
+  width:36px;height:36px;min-width:36px;
+  border-radius:4px;background:#fff;border:1px solid #dce7df;
+  display:grid;place-items:center;overflow:hidden;
+}
+.brand-mark img{display:block;width:34px;height:34px;object-fit:contain}
+.sidebar{background:#f6f8f6;border-right-color:var(--nimis-border)}
+.brand{background:var(--nimis-green)}
+.nav-item.active{background:var(--nimis-green-soft);color:var(--nimis-green)}
+.nav-item.active svg,.nav-item.active svg *{color:var(--nimis-green)}
+.nav-item.active{box-shadow:inset 3px 0 var(--nimis-green)}
+.topbar{background:var(--nimis-green)}
+.reg-primary{background:var(--nimis-green);border-color:var(--nimis-green)}
+.reg-primary:hover{background:var(--nimis-green-deep);border-color:var(--nimis-green-deep)}
+/* Keep national identity colours functional, not decorative. */
+.status-kpi-icon.green{background:#e8f1eb;color:var(--nimis-green)}
+.status-kpi-icon.blue{background:#edf2f7;color:var(--nimis-navy)}
+@media(max-width:900px){.brand-mark{width:36px;height:36px;min-width:36px}}
