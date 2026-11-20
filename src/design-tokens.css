@@ -43,6 +43,8 @@
   --play-control-radius: 999px;
   --play-icon-radius: 22%;
   --play-card-padding: 24px;
+  --play-sidebar-width: 288px;
+  --play-sidebar-drawer-width: 300px;
 
   --play-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   --play-card-shadow-hover: 0 5px 16px rgba(60, 64, 67, 0.14);

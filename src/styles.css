@@ -1537,6 +1537,16 @@ tbody tr:hover{background:#f8f9fa}
   .connection-status{gap:5px;padding:5px 7px}
   .connection-status b{display:none}
 }
+@media(min-width:901px){
+  .sidebar{width:var(--play-sidebar-width)!important}
+  .main-area{
+    width:calc(100% - var(--play-sidebar-width))!important;
+    margin-left:var(--play-sidebar-width)!important;
+  }
+}
+@media(max-width:900px){
+  .sidebar{width:min(var(--play-sidebar-drawer-width),calc(100vw - 48px))!important}
+}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
