@@ -226,3 +226,105 @@ body{background:#f1f4f2}
 .status-kpi-icon.amber{background:#fbf3df;color:#9a7620}
 .status-kpi-icon.cyan{background:#edf2f7;color:#17456f}
 .status-kpi-icon.red{background:#faeceb;color:#b33a35}
+
+
+/* NIMIS national operations interface — final consistency pass */
+:root{
+  --nimis-green:#075b3a;
+  --nimis-green-deep:#06472f;
+  --nimis-green-soft:#e8f1eb;
+  --nimis-ink:#23372b;
+  --nimis-muted:#718077;
+  --nimis-line:#dfe7e2;
+  --nimis-canvas:#f1f4f2;
+}
+body,.main-area,.content-wrap{background:var(--nimis-canvas)}
+.sidebar{background:#f8faf8;border-right:1px solid var(--nimis-line)}
+.brand{background:var(--nimis-green);height:58px;padding:0 12px}
+.brand-mark{width:35px;height:35px;min-width:35px;border-radius:3px;background:#fff;border:1px solid #d9e5dc}
+.brand-mark img{width:33px;height:33px;object-fit:contain}
+.brand-text strong{font-size:15px;letter-spacing:.35px}
+.brand-text span{font-size:7px;line-height:1.3}
+.nav-scroll{padding:12px 7px}
+.nav-heading{font-size:8px;color:#829188;letter-spacing:.8px;padding:0 8px 6px}
+.nav-item{font-size:9px;padding:9px 8px;border-radius:4px;color:#4f6055}
+.nav-item.active{background:#e7f0e9;color:var(--nimis-green);box-shadow:inset 3px 0 var(--nimis-green)}
+.nav-item.active svg{color:var(--nimis-green)}
+.sidebar-bottom{background:#f8faf8}
+.main-area{margin-left:166px}
+.topbar{height:56px;background:var(--nimis-green);padding:0 18px}
+.ministry-brand strong{font-size:9px;letter-spacing:.1px}
+.ministry-brand span{font-size:7px}
+.breadcrumb{font-size:9px}
+.content-wrap{padding:17px 18px 16px}
+.content-inner{max-width:1680px}
+.welcome-row{margin-bottom:12px}
+.welcome-row h1{font-size:19px;letter-spacing:-.25px;color:#193d2a}
+.subtitle{font-size:10px;line-height:1.55}
+.eyebrow{font-size:8px;letter-spacing:.75px;color:#668171}
+.period-select{height:30px;border-radius:4px;font-size:8px}
+.data-note{border-radius:4px;padding:8px 10px;font-size:9px;line-height:1.5;margin-bottom:11px}
+.kpi-grid{gap:9px;margin-bottom:10px}
+.kpi-card{padding:10px 11px;border-radius:5px;border-color:var(--nimis-line);box-shadow:none}
+.kpi-label{font-size:9px}.kpi-value{font-size:19px}.kpi-note{font-size:8px}
+.status-kpi-grid{gap:8px;margin-bottom:11px}
+.status-kpi{padding:8px 9px;border-radius:5px}
+.status-kpi small{font-size:8px}.status-kpi strong{font-size:15px}
+.dash-grid{gap:10px;margin-bottom:11px}
+.panel{border:1px solid var(--nimis-line);border-radius:5px;box-shadow:none}
+.panel-head{padding:11px 12px 9px}
+.panel-head h2{font-size:11px;color:#254332}
+.panel-head p{font-size:8px;line-height:1.4}
+.schemes-panel{margin-bottom:11px}
+.table-wrap table{min-width:760px}
+.table-wrap thead th{font-size:8px;padding:8px 10px;color:#687a6e;background:#f7f9f7;border-top:1px solid #e8eee9}
+.table-wrap tbody td{font-size:9px;padding:9px 10px;color:#526258}
+.table-wrap tbody tr:hover{background:#f8fbf8}
+.scheme-name{font-size:9px;color:#284b36}
+.scheme-name small{font-size:8px}
+.status{font-size:8px;border-radius:3px;padding:4px 6px}
+.reg-toolbar{padding:10px 11px;gap:8px}
+.reg-search,.reg-toolbar select{height:31px;border-radius:4px}
+.reg-search input,.reg-toolbar select{font-size:9px}
+.reg-primary{background:var(--nimis-green);border-color:var(--nimis-green);border-radius:4px;font-size:9px;padding:8px 11px}
+.reg-primary:hover{background:var(--nimis-green-deep)}
+.ghost-btn{border-radius:4px;font-size:9px;padding:7px 9px}
+.reg-summary{gap:8px;margin-bottom:11px}
+.reg-summary>div{border:1px solid var(--nimis-line);border-radius:5px;padding:10px 11px}
+.reg-summary small{font-size:8px}.reg-summary strong{font-size:17px}
+.reg-foot{font-size:8px}
+.reg-modal{border-radius:6px}
+.reg-modal-head h2{font-size:15px}
+.reg-field span{font-size:9px}
+.reg-field input,.reg-field select{border-radius:4px;font-size:10px;height:33px}
+.bottom-grid{gap:10px}
+.page-footer{font-size:8px;padding-top:12px}
+.module-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+.module-page .panel{margin-bottom:11px}
+.map-layer-label{font-size:8px;border-radius:3px}
+.chart-empty-state{min-height:165px}
+.data-ops-grid{gap:10px;margin:11px 0}
+.data-ops-body{padding:12px}
+.import-drop{border-radius:4px}
+.sync-explainer{border-radius:4px}
+.connection-status{font-size:9px;border-radius:3px;padding:5px 7px}
+.page-footer .footer-status{background:#8eb69a}
+@media(max-width:900px){
+  .sidebar{width:166px}.main-area{margin-left:166px}
+  .content-wrap{padding:13px 11px}
+  .topbar{padding:0 10px}
+  .ministry-brand strong{font-size:7px}
+  .searchbox{width:115px}
+}
+@media(max-width:680px){
+  .sidebar{width:235px}.main-area{margin-left:0}
+  .topbar{height:49px;padding:0 9px}
+  .content-wrap{padding:11px 8px}
+  .welcome-row{gap:9px}
+  .welcome-row h1{font-size:17px}
+  .module-kpis{grid-template-columns:1fr 1fr}
+  .panel-head{padding:10px}
+  .table-wrap table{min-width:760px}
+  .reg-summary{grid-template-columns:1fr 1fr}
+  .data-ops-grid{grid-template-columns:1fr}
+}
