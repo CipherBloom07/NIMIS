@@ -479,3 +479,35 @@ body,.main-area,.content-wrap{background:var(--nimis-canvas)}
   .reg-summary{grid-template-columns:1fr 1fr}
   .data-ops-grid{grid-template-columns:1fr}
 }
+
+
+/* Ministry-aligned palette: restrained national green with Zimbabwe flag accents */
+:root{
+  --nimis-brand:#08783E;
+  --nimis-brand-dark:#075A32;
+  --nimis-brand-deep:#064528;
+  --nimis-blue:#174A78;
+  --nimis-gold:#F2C230;
+  --nimis-red:#D92727;
+  --nimis-ink:#26362D;
+  --nimis-muted:#6E7D73;
+  --nimis-line:#DCE5DE;
+  --nimis-canvas:#F4F6F4;
+  --nimis-panel:#FFFFFF;
+  --nimis-green-soft:#EAF3ED;
+}
+body,.main-area,.content-wrap{background:var(--nimis-canvas)}
+.brand,.topbar{background:var(--nimis-brand-dark)}
+.brand-mark{background:#fff;border-color:#d8e4da}
+.nav-item.active{background:var(--nimis-green-soft);color:var(--nimis-brand-dark);box-shadow:inset 3px 0 var(--nimis-brand)}
+.nav-item.active svg{color:var(--nimis-brand-dark)}
+.reg-primary,.primary-btn,.btn-primary{background:var(--nimis-brand);border-color:var(--nimis-brand)}
+.reg-primary:hover,.primary-btn:hover,.btn-primary:hover{background:var(--nimis-brand-dark);border-color:var(--nimis-brand-dark)}
+a,.link,.text-link{color:var(--nimis-blue)}
+.kpi-icon.green,.activity-icon.green,.status-kpi-icon.green{background:var(--nimis-green-soft)!important;color:var(--nimis-brand-dark)!important}
+.kpi-icon.blue,.activity-icon.blue,.status-kpi-icon.blue{background:#EAF0F6!important;color:var(--nimis-blue)!important}
+.kpi-icon.gold,.activity-icon.amber,.status-kpi-icon.amber{background:#FBF4DF!important;color:#8C6A0A!important}
+.status-kpi-icon.red{background:#F9EAEA!important;color:var(--nimis-red)!important}
+.data-note,.sync-explainer{border-left-color:var(--nimis-brand)}
+.table-wrap thead th{background:#F1F5F2}
+.reg-primary:focus-visible,.ghost-btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--nimis-blue);outline-offset:2px}
