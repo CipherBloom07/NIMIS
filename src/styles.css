@@ -3,3 +3,137 @@
 @media(max-width:1180px){.content-wrap{padding:23px 20px}.topbar{padding:0 20px}.sidebar{width:235px}.main-area{margin-left:235px}.kpi-grid{gap:10px}.kpi-card{padding:13px}.kpi-value{font-size:21px}.dash-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.sidebar{transform:translateX(-100%);transition:transform .25s;width:260px}.sidebar.open{transform:translateX(0)}.close-sidebar{display:grid;place-items:center;margin-left:auto;background:none;border:0;color:#a8c2b3}.mobile-overlay{display:block;position:fixed;inset:0;background:#071d1490;z-index:9}.main-area{margin-left:0}.mobile-menu{display:grid}.topbar{gap:10px}.breadcrumb{flex:1}.top-actions{gap:10px}.searchbox{width:min(200px,28vw)}.dash-grid{grid-template-columns:1fr}.map-panel,.province-panel{min-height:auto}.province-panel{padding-bottom:4px}.province-list{gap:8px}.bottom-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:620px){.topbar{height:58px;padding:0 13px}.top-actions .searchbox{width:36px;padding:0;justify-content:center;border:0;background:transparent}.searchbox input{display:none}.searchbox button{display:none}.top-user span,.top-user>svg{display:none}.content-wrap{padding:20px 13px}.welcome-row{align-items:flex-start;flex-direction:column;gap:12px}.welcome-row h1{font-size:22px}.period-select{align-self:flex-start}.kpi-grid{grid-template-columns:1fr 1fr;gap:9px}.kpi-card{padding:12px}.kpi-value{font-size:19px}.kpi-note{font-size:9px}.dash-grid{gap:12px}.panel-head{padding:14px 13px 11px}.panel-head h2{font-size:12px}.panel-head p{font-size:9px}.map-visual{height:220px;margin:0 8px 9px}.bottom-grid{grid-template-columns:1fr;gap:12px}.page-footer{flex-direction:column;align-items:flex-start;gap:8px;font-size:8px}.data-note{font-size:9px;align-items:flex-start}.module-placeholder{padding:25px 14px}.panel-actions .ghost-btn{padding:7px}.top-user{display:none}}
+/* NIMIS Scheme Registry module */
+.reg-primary{display:inline-flex;align-items:center;gap:7px;background:#24543d;border:1px solid #24543d;color:#fff;padding:9px 13px;border-radius:7px;font-size:11px;font-weight:600;white-space:nowrap}.reg-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.reg-summary>div{background:#fff;border:1px solid #e5ece7;border-radius:9px;padding:13px}.reg-summary small{display:block;color:#839188;font-size:10px;margin-bottom:7px}.reg-summary strong{color:#244331;font-size:19px}.reg-toolbar{display:flex;gap:8px;padding:13px;align-items:center;flex-wrap:wrap}.reg-search{display:flex;align-items:center;gap:8px;border:1px solid #e3e9e4;border-radius:7px;padding:0 9px;height:33px;color:#829188;flex:1;min-width:170px}.reg-search input{border:0;outline:0;min-width:0;width:100%;font-size:11px}.reg-toolbar select{height:33px;border:1px solid #e1e8e2;border-radius:7px;background:#fff;color:#526458;padding:0 8px;font-size:11px}.reg-actions{display:flex;gap:4px}.reg-actions button,.reg-close{width:28px;height:28px;display:grid;place-items:center;background:#fff;border:1px solid #e5ebe6;border-radius:6px;color:#688070}.reg-foot{border-top:1px solid #eef2ef;padding:11px 13px;color:#99a49d;font-size:9px}.reg-empty{padding:26px;text-align:center;color:#91a097;font-size:11px}.reg-modal-back{position:fixed;inset:0;background:#0b241b80;z-index:50;display:grid;place-items:center;padding:18px}.reg-modal{background:#fff;width:min(680px,100%);max-height:90vh;overflow:auto;border-radius:12px;box-shadow:0 20px 70px #0003}.reg-modal-head{display:flex;justify-content:space-between;align-items:flex-start;padding:19px;border-bottom:1px solid #edf1ee}.reg-modal-head h2{margin:0;color:#23402e;font-size:16px}.reg-modal-head p{margin:6px 0 0;color:#89968e;font-size:10px}.reg-modal form{padding:18px}.reg-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.reg-field{display:flex;flex-direction:column;gap:6px}.reg-field span{font-size:10px;color:#65766b}.reg-field input,.reg-field select{width:100%;height:34px;border:1px solid #e1e8e2;border-radius:7px;background:#fff;color:#526458;padding:0 8px;font-size:11px}.reg-modal-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:16px;border-top:1px solid #edf1ee;margin-top:16px}.reg-close{border:0}@media(max-width:700px){.reg-summary{grid-template-columns:1fr 1fr}.reg-toolbar select{flex:1;min-width:115px}.reg-form-grid{grid-template-columns:1fr}.reg-modal-back{padding:8px}.reg-modal form,.reg-modal-head{padding:15px}}
+
+/* Executive dashboard reference KPI row */
+.status-kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:0 0 13px}.status-kpi{display:flex;align-items:center;gap:9px;padding:10px 11px;background:#fff;border:1px solid #e4e9e6;border-radius:8px;min-width:0}.status-kpi-icon{width:30px;height:30px;display:grid;place-items:center;border-radius:7px;flex-shrink:0}.status-kpi-icon.green{background:#e5f5e9;color:#279451}.status-kpi-icon.blue{background:#e8f0ff;color:#4276c9}.status-kpi-icon.amber{background:#fff2df;color:#dc8a28}.status-kpi-icon.cyan{background:#e4f6fb;color:#2998bb}.status-kpi-icon.red{background:#ffebed;color:#c54c5c}.status-kpi small{display:block;font-size:9px;color:#829087;margin-bottom:3px}.status-kpi strong{font-size:17px;color:#263e30}@media(max-width:780px){.status-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:450px){.status-kpi-grid{grid-template-columns:1fr 1fr}.status-kpi strong{font-size:15px}}
+
+/* === NIMIS reference-screen fidelity layer === */
+:root{font-family:Arial,Helvetica,sans-serif;color:#26362d;background:#f1f4f2;font-size:12px}
+body{background:#f1f4f2}
+.sidebar{width:166px;background:#f5f7f6;color:#34443a;border-right:1px solid #dfe6e1;box-shadow:none}
+.brand{height:54px;padding:0 10px;gap:7px;background:#075b3a;color:#fff}
+.brand-mark{width:29px;height:29px;border-radius:50%;background:#fff;color:#176341;border:2px solid #d5e8d9}
+.brand-mark svg{width:17px;height:17px}
+.brand-text{min-width:0;gap:1px}
+.brand-text strong{font-size:15px;letter-spacing:.2px;color:#fff}
+.brand-text span{font-size:7px;line-height:1.2;color:#e2eee6;letter-spacing:0}
+.sidebar-divider{display:none}
+.nav-scroll{padding:8px 6px}
+.nav-group{margin-bottom:12px}
+.nav-heading{font-size:8px;letter-spacing:.7px;color:#8b9a90;padding:0 7px 5px}
+.nav-item{color:#526157;padding:8px 7px;gap:7px;border-radius:4px;margin:1px 0;font-size:9px;line-height:1.15}
+.nav-item svg{width:13px;height:13px;flex-shrink:0}
+.nav-item.active{background:#dcefe3;color:#075b3a;box-shadow:inset 3px 0 #087446;font-weight:700}
+.nav-item.active svg{color:#087446}
+.nav-active-dot{width:4px;height:4px;background:#087446}
+.sidebar-bottom{padding:8px 7px 9px;border-top:1px solid #e0e7e2}
+.user-card{padding:6px 5px;background:#fff;border:1px solid #e2e9e4;border-radius:5px;gap:6px}
+.user-avatar{width:25px;height:25px;font-size:8px}
+.user-info strong{font-size:8px;color:#34483a}.user-info span{font-size:7px;color:#819087}
+.sidebar-footer{font-size:7px;color:#829188;padding:8px 3px 0}
+.main-area{margin-left:166px}
+.topbar{height:55px;background:#075b3a;border-bottom:0;color:#fff;padding:0 16px;box-shadow:0 1px 3px #123a281c}
+.breadcrumb{color:#d7e8dd;font-size:9px;gap:7px}
+.breadcrumb b{color:#a9c8b6}.breadcrumb strong{color:#fff}
+.ministry-brand{display:flex;flex-direction:column;gap:2px;color:#fff;min-width:0;flex:1;padding-left:12px}
+.ministry-brand strong{font-size:9px;font-weight:700;letter-spacing:.1px}
+.ministry-brand span{font-size:7px;color:#d7e9de}
+.top-actions{gap:9px}
+.searchbox{height:27px;width:175px;border:1px solid #ffffff48;background:#ffffff12;color:#e5f0e9;border-radius:4px}
+.searchbox input{font-size:9px;color:#fff}.searchbox input::placeholder{color:#d1e1d7}
+.searchbox svg{width:13px;height:13px}
+.icon-btn{width:27px;height:27px;border-color:#ffffff38;background:#ffffff12;color:#fff;border-radius:4px}
+.top-user{color:#fff;font-size:9px}.top-user .user-avatar{background:#e4efe7;color:#17583a}
+.content-wrap{padding:15px 16px 14px}
+.content-inner{max-width:1600px}
+.welcome-row{margin-bottom:9px;align-items:center}
+.eyebrow{font-size:8px;letter-spacing:.6px;color:#71867a;margin-bottom:4px}
+.welcome-row h1{font-size:17px;letter-spacing:-.2px;color:#183d2a}
+.subtitle{font-size:9px;margin-top:4px;color:#7b8980}
+.period-select{height:27px;border-radius:4px;font-size:8px;padding:0 8px}
+.data-note{padding:6px 8px;border-radius:4px;font-size:8px;margin-bottom:9px}
+.kpi-grid{gap:7px;margin-bottom:8px}
+.kpi-card{border-radius:5px;padding:8px 9px;box-shadow:none;border-color:#e2e9e4}
+.kpi-top{margin-bottom:6px}.kpi-icon{width:24px;height:24px;border-radius:5px}.kpi-icon svg{width:14px;height:14px}
+.trend{font-size:8px}.kpi-label{font-size:8px;margin-bottom:4px}.kpi-value{font-size:17px;letter-spacing:-.3px}.kpi-note{font-size:7px;margin-top:4px}
+.status-kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:0 0 9px}
+.status-kpi{padding:7px 8px;border-radius:5px;gap:6px;box-shadow:none}
+.status-kpi-icon{width:23px;height:23px;border-radius:4px}.status-kpi-icon svg{width:12px;height:12px}
+.status-kpi small{font-size:7px}.status-kpi strong{font-size:14px}
+.dash-grid{grid-template-columns:1.08fr .92fr;gap:8px;margin-bottom:9px}
+.panel{border-radius:5px;box-shadow:none;border-color:#e0e7e2}
+.map-panel,.province-panel{min-height:235px}
+.panel-head{padding:9px 10px 7px;gap:7px}
+.panel-head h2{font-size:10px;color:#254332}.panel-head p{font-size:8px;margin-top:3px}
+.ghost-btn{font-size:8px;padding:5px 7px;border-radius:4px}
+.province-row{margin-bottom:8px}.province-label{font-size:8px}.bar-track{height:5px;border-radius:2px}
+.panel-foot{font-size:7px;padding:7px 10px}
+.schemes-panel{margin-bottom:9px}
+.table-wrap th{font-size:7px;padding:7px 8px}.table-wrap td{font-size:8px;padding:7px 8px}
+.scheme-name{font-size:8px}.scheme-name small{font-size:7px}
+.status{font-size:7px;padding:3px 5px}
+.bottom-grid{gap:8px}
+.activity-item{padding:7px 9px}.activity-item strong{font-size:8px}.activity-item p,.activity-item time{font-size:7px}
+.quick-links button{padding:7px 9px;font-size:8px}
+.page-footer{font-size:7px;padding-top:8px}
+@media(max-width:900px){.sidebar{width:166px}.main-area{margin-left:166px}.content-wrap{padding:12px 10px}.ministry-brand strong{font-size:8px}}
+@media(max-width:680px){.sidebar{transform:translateX(-100%);width:235px}.sidebar.open{transform:translateX(0)}.main-area{margin-left:0}.topbar{height:48px;padding:0 9px}.ministry-brand{display:none}.content-wrap{padding:10px 8px}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.status-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-grid,.bottom-grid{grid-template-columns:1fr}.map-panel,.province-panel{min-height:200px}.welcome-row h1{font-size:16px}.top-actions{gap:5px}.searchbox{width:125px}.top-user span{display:none}}
+
+
+/* Real interactive GIS map */
+.nimis-map-wrap{position:relative;width:100%;height:100%;min-height:230px;overflow:hidden;border-radius:0 0 5px 5px;background:#e7eee9}
+.nimis-map{position:absolute;inset:0;width:100%;height:100%;min-height:230px;z-index:1;background:#e7eee9}
+.nimis-map .leaflet-control-attribution{font-size:9px;line-height:1.3}
+.nimis-map .leaflet-control-zoom a{color:#28583d}
+.nimis-map .leaflet-popup-content-wrapper{border-radius:5px;box-shadow:0 3px 14px #173a2626}
+.nimis-map .leaflet-popup-content{margin:9px 12px;font-family:Arial,Helvetica,sans-serif}
+.map-popup{display:flex;flex-direction:column;gap:4px;min-width:120px;color:#526458;font-size:10px}
+.map-popup strong{font-size:12px;color:#17452e}
+.map-popup em{font-style:normal;color:#39845a;font-weight:700}
+.nimis-map-wrap .map-caption{z-index:500;pointer-events:none;top:9px;left:9px;font-size:8px;box-shadow:0 1px 4px #173a2617}
+.nimis-map-wrap .map-legend{z-index:500;bottom:9px;left:9px;font-size:8px;box-shadow:0 1px 4px #173a2617}
+.nimis-map-large{height:440px;min-height:360px;margin:0 10px 10px}
+.nimis-map-large .nimis-map{min-height:360px}
+.gis-map-panel{margin-bottom:10px}
+.map-layer-label{font-size:8px;color:#718278;border:1px solid #e1e9e3;background:#f9fbf9;border-radius:4px;padding:5px 7px;white-space:nowrap}
+.map-source-note{position:absolute;z-index:500;right:8px;bottom:8px;background:#ffffffdf;color:#68796e;border-radius:4px;padding:5px 7px;font-size:7px;max-width:48%;pointer-events:none}
+.map-visual.nimis-map-wrap{height:238px;min-height:238px;margin:0 12px 12px;border-radius:5px}
+.map-visual.nimis-map-wrap .nimis-map{min-height:238px}
+.map-visual.nimis-map-wrap .map-legend{bottom:8px;left:8px}
+.map-visual.nimis-map-wrap .map-caption{top:8px;left:8px}
+@media(max-width:680px){
+  .map-visual.nimis-map-wrap{height:220px;min-height:220px;margin:0 8px 9px}
+  .map-visual.nimis-map-wrap .nimis-map{min-height:220px}
+  .nimis-map-large{height:340px;min-height:300px;margin:0 7px 8px}
+  .nimis-map-large .nimis-map{min-height:300px}
+  .map-source-note{max-width:62%;font-size:6px}
+}
+
+
+/* Tablet navigation and semantic workflow statuses */
+.status.neutral{background:#eef1ef;color:#68766e}.status.neutral i{background:#89968e}
+.status.red{background:#ffebed;color:#b74655}.status.red i{background:#c94d5c}
+@media (min-width:681px) and (max-width:900px){.sidebar{transform:translateX(0);width:166px}.main-area{margin-left:166px}.mobile-menu{display:none}.mobile-overlay{display:none}}
+@media(max-width:680px){.sidebar{width:235px}.main-area{margin-left:0}.mobile-menu{display:grid}}
+
+
+/* Report catalogue selection */
+.report-select{border:0;background:transparent;color:#176b48;font:inherit;font-weight:700;text-align:left;padding:4px 0;cursor:pointer}
+.report-select:hover,.report-select:focus-visible{text-decoration:underline;outline-offset:3px}
+.report-select[aria-pressed="true"]{color:#0b4f35}
+
+
+/* Keep the compact tablet header readable without hiding ministry context. */
+@media (min-width:681px) and (max-width:900px){
+  .topbar{padding:0 10px;gap:8px}
+  .ministry-brand{padding-left:4px;flex:1 1 auto;min-width:0}
+  .ministry-brand strong{font-size:7px;line-height:1.25;white-space:normal}
+  .ministry-brand span{font-size:6px}
+  .breadcrumb{flex:0 0 auto;gap:5px;font-size:8px}
+  .top-actions{flex:0 1 auto;gap:5px;min-width:0}
+  .searchbox{width:118px;flex:0 1 118px}
+  .top-user{gap:4px;font-size:9px}
+  .content-wrap{padding:12px 10px}
+}
