@@ -849,3 +849,9 @@ button,input,select,textarea{font:inherit}
   .kpi-card:last-child{border-bottom:0}
   .status-kpi{border-right:0!important}
 }
+
+/* Fix desktop sidebar/main workspace alignment: sidebar is 254px wide. */
+@media(min-width:901px){
+ .sidebar{width:254px!important}
+ .main-area{margin-left:254px!important;width:calc(100% - 254px)!important}
+}
