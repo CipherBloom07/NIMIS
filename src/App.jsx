@@ -175,7 +175,7 @@ function ModulePage({id}) {
     category:id==='water'?'Dam / river source':id==='infrastructure'?'Conveyance system':id==='agronomy'?'Maize':id==='projects'?'Rehabilitation':id==='gis'?'Scheme location':'Scheme profile',
     status:i===2?'Under review':i===4?'Attention required':'Verified',
     detail:id==='water'?'Source observation pending verification':id==='infrastructure'?'Condition assessment recorded':id==='agronomy'?'2026/27 season sample record':id==='projects'?'Milestone progress requires update':id==='gis'?'Coordinates require field confirmation':'Master profile sample record',
-    updated:'Nov 2026'
+    updated:'—'
   }));
   const masterSchemes=useMemo(()=>{const base=schemes.map(s=>({id:s.id,name:s.name,province:s.province,district:s.district}));try{const saved=typeof window!=='undefined'?JSON.parse(window.localStorage.getItem('nimis-registry-v1')):null;return Array.isArray(saved)&&saved.length?saved.map(s=>({id:s.id,name:s.name,province:s.province,district:s.district})):base}catch{return base}} ,[]);
   const [records,setRecords]=useState(()=>{
