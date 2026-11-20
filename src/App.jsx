@@ -140,11 +140,14 @@ function DashboardVisuals({records,totals,format}) {
     ['Currently irrigated',totals.irrigated,'#d8a91c'],
   ];
   const maxArea=Math.max(1,...stages.map(([,value])=>value));
-  const provinceTotals=Object.entries(records.reduce((result,record)=>{
+  const provinceEntries=Object.entries(records.reduce((result,record)=>{
     const province=String(record.province||'Not recorded');
     result[province]=(result[province]||0)+(Number(record.irrigated)||0);
     return result;
-  },{})).filter(([,value])=>value>0).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  },{})).filter(([,value])=>value>0).sort((a,b)=>b[1]-a[1]);
+  const provinceTotals=provinceEntries.length>5
+    ?[...provinceEntries.slice(0,4),['Other provinces',provinceEntries.slice(4).reduce((sum,[,value])=>sum+value,0)]]
+    :provinceEntries;
   const totalIrrigated=provinceTotals.reduce((sum,[,value])=>sum+value,0);
   const palette=['#08783e','#368ab3','#d8a91c','#8c79c8','#c9544d'];
   let cursor=0;
