@@ -985,3 +985,99 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .province-donut{width:120px;height:120px;flex-basis:120px}
   .province-donut>div{width:74px;height:74px}
 }
+
+/* Comfortable reading rhythm with a lighter, more compact dashboard density */
+body{font-size:15px;line-height:1.55}
+.nav-group{margin-bottom:18px}
+.nav-heading{font-size:.6875rem;line-height:1.4;letter-spacing:.08em}
+.nav-item{min-height:38px;padding:8px 10px;font-size:.8125rem;line-height:1.4}
+.user-info strong{font-size:.75rem}
+.user-info span,.sidebar-footer{font-size:.6875rem;line-height:1.5}
+.topbar{min-height:58px;padding:8px 16px}
+.ministry-brand strong{font-size:.75rem;line-height:1.35}
+.ministry-brand span,.breadcrumb{font-size:.6875rem}
+.top-actions{gap:7px}
+.content-wrap{padding:clamp(20px,2vw,28px)}
+.welcome-row{gap:14px;margin-bottom:16px}
+.eyebrow{font-size:.6875rem;letter-spacing:.09em}
+.welcome-row h1{font-size:clamp(1.4rem,1.8vw,1.75rem);line-height:1.25}
+.subtitle{font-size:.875rem;line-height:1.55}
+.data-note{padding:11px 14px;font-size:.8125rem;line-height:1.55;margin-bottom:16px}
+.dashboard-summary{padding:15px 17px;margin-bottom:16px}
+.dashboard-summary strong{font-size:1.125rem}
+.kpi-grid{gap:12px;margin-bottom:14px;border:0;background:transparent}
+.kpi-card{padding:13px 15px;border:1px solid var(--nimis-border);border-radius:7px}
+.kpi-card:last-child{border-right:1px solid var(--nimis-border)}
+.kpi-top{margin-bottom:9px}
+.kpi-label{font-size:.75rem;line-height:1.45}
+.kpi-value{font-size:clamp(1.125rem,1.5vw,1.4rem);line-height:1.3}
+.kpi-note,.trend{font-size:.6875rem;line-height:1.45}
+.status-kpi-grid{gap:8px;margin-bottom:16px;border:0;background:transparent}
+.status-kpi{padding:9px 10px;border:1px solid var(--nimis-border);border-radius:6px;background:#fff}
+.status-kpi:last-child{border-right:1px solid var(--nimis-border)}
+.status-kpi small{font-size:.6875rem;line-height:1.4}
+.status-kpi strong{font-size:.9375rem}
+.dash-grid,.bottom-grid{gap:16px;margin-bottom:16px}
+.panel{border-radius:7px}
+.panel-head{padding:14px 16px 12px;gap:12px}
+.panel-head h2{font-size:.875rem;line-height:1.4}
+.panel-head p{font-size:.75rem;line-height:1.5}
+.ghost-btn,.reg-primary{min-height:36px;padding:7px 10px;font-size:.75rem}
+.province-list{gap:10px}
+.province-label,.panel-foot,.live-label{font-size:.75rem;line-height:1.45}
+.table-wrap thead th{font-size:.6875rem;padding:10px 12px}
+.table-wrap tbody td{font-size:.75rem;line-height:1.45;padding:11px 12px}
+.scheme-name{font-size:.75rem}
+.scheme-name small{font-size:.6875rem}
+.status{font-size:.6875rem;padding:4px 7px}
+.activity-item{padding:10px 0}
+.activity-item strong,.quick-links button span{font-size:.75rem;line-height:1.4}
+.activity-item p,.activity-item time,.page-footer{font-size:.6875rem;line-height:1.5}
+.quick-links button{padding:10px 5px}
+.module-kpis{gap:12px}
+.module-insights{gap:14px;margin-bottom:16px}
+.insight-list{gap:13px;padding:5px 16px 16px}
+.insight-row>div:first-child,.area-chart-row>div:first-child{font-size:.75rem;line-height:1.45}
+.area-chart{gap:16px;padding:9px 16px 17px}
+.workflow-legend>div,.province-chart-legend>div{font-size:.6875rem;line-height:1.4}
+.reg-summary{gap:8px;border:0;background:transparent}
+.reg-summary>div{padding:12px;border:1px solid var(--nimis-border);border-radius:6px}
+.reg-summary>div:last-child{border-right:1px solid var(--nimis-border)}
+.reg-summary small,.reg-field span,.reg-foot{font-size:.6875rem;line-height:1.45}
+.reg-summary strong{font-size:1.125rem}
+.reg-toolbar{gap:9px;padding:12px}
+.reg-field input,.reg-field select{min-height:40px}
+.module-placeholder p,.data-ops-body>p,.muted-copy{font-size:.8125rem;line-height:1.6}
+.sync-explainer ol,.import-result{font-size:.75rem;line-height:1.6}
+.map-caption,.map-legend,.map-layer-label{font-size:.6875rem}
+.map-source-note{font-size:.625rem;line-height:1.45}
+.chart-empty-state span{font-size:.75rem;line-height:1.55}
+
+@media(max-width:900px){
+  .content-wrap{padding:18px 16px}
+  .kpi-grid,.module-kpis{gap:10px}
+  .dash-grid,.bottom-grid{gap:13px}
+  .module-insights{gap:12px}
+}
+@media(max-width:620px){
+  body{font-size:14px}
+  .topbar{min-height:54px;padding:7px 10px}
+  .content-wrap{padding:16px 12px}
+  .welcome-row{gap:9px;margin-bottom:13px}
+  .welcome-row h1{font-size:1.35rem}
+  .subtitle{font-size:.8125rem}
+  .kpi-grid,.status-kpi-grid,.module-kpis{gap:8px}
+  .kpi-card{padding:10px}
+  .kpi-value{font-size:1.05rem}
+  .kpi-label{font-size:.6875rem}
+  .kpi-note{font-size:.625rem}
+  .status-kpi{padding:8px}
+  .status-kpi small{font-size:.625rem}
+  .status-kpi strong{font-size:.875rem}
+  .panel-head{padding:11px 12px}
+  .panel-head h2{font-size:.8125rem}
+  .panel-head p{font-size:.6875rem}
+  .data-note{font-size:.75rem;padding:9px 10px}
+  .activity-item strong,.quick-links button span{font-size:.75rem}
+  .page-footer{font-size:.625rem}
+}
