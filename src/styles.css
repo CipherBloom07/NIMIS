@@ -174,3 +174,9 @@ body{background:#f1f4f2}
 
 .chart-empty-state{min-height:188px;padding:24px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:#829087}
 .chart-empty-state svg{color:#8ca99a}.chart-empty-state strong{font-size:12px;color:#405c4a}.chart-empty-state span{max-width:290px;font-size:10px;line-height:1.6}
+
+.connection-status{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:10px;font-weight:650;padding:6px 9px;border:1px solid #ffffff45;border-radius:20px;color:#fff}
+.connection-status i{width:7px;height:7px;border-radius:50%;background:#a8e2b5}
+.connection-status.offline i{background:#ffd28a}
+.connection-status b{font-weight:600;padding-left:5px;border-left:1px solid #ffffff55}
+@media(max-width:680px){.connection-status{font-size:9px;padding:5px 7px}.connection-status b{display:none}}
