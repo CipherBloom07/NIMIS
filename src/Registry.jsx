@@ -1,6 +1,6 @@
 import React,{useState,useMemo,useEffect} from 'react';
 import {enqueueSyncChange} from './dataSync.js';
-import {Search,Plus,Download,Pencil,Trash2,X} from 'lucide-react';
+import {Search,Plus,Download,Pencil,Trash2,X,ShieldCheck} from 'lucide-react';
 const seed=[
 {id:'NIM-MAN-001',name:'Chisumbanje',province:'Manicaland',district:'Chisumbanje',water:'River / canal',status:'Operational',developed:2780,equipped:2500,irrigated:2200},
 {id:'NIM-MAN-014',name:'Tongogara',province:'Manicaland',district:'Chipinge',water:'Dam',status:'Operational',developed:1640,equipped:1200,irrigated:880},
