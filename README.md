@@ -47,3 +47,12 @@ All dashboard numbers and scheme records are sample/illustrative data. They are 
 
 ## Architecture decisions
 The UI is intentionally decoupled from server services. Before backend implementation, validate system requirements, permissions, entity relationships, hosting, GIS platform, security, licensing and integration constraints with authorised stakeholders.
+
+
+## Data capture and synchronization
+- NIMIS supports gradual scheme registration; unknown area and water-source fields can remain blank until collected and verified.
+- The Data Management & Verification workspace imports CSV scheme registers, validates rows and places accepted records into a local synchronization outbox.
+- Scheme Registry create/edit/delete operations are added to the same outbox.
+- The outbox can POST events to a configured HTTPS API endpoint. The receiving service must validate each event and return JSON with an `acceptedEventIds` array; unacknowledged events remain pending.
+- **This repository is still a frontend prototype.** Browser-local data does not synchronize between devices or users until an approved backend, shared PostgreSQL database, authentication and server-side authorization are implemented. No external institutional integrations are connected.
+- CSV headers: `id,name,province,district,water,status,developed,equipped,irrigated`. The import accepts partial records and checks the developed/equipped/irrigated relationship where values are supplied.
