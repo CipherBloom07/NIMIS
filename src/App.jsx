@@ -85,9 +85,19 @@ function Dashboard({ onSelect }) {
   const [registeredCount,setRegisteredCount]=useState(schemes.length);
   useEffect(()=>{try{const saved=JSON.parse(window.localStorage.getItem('nimis-registry-v1'));if(Array.isArray(saved))setRegisteredCount(saved.length)}catch{}},[]);
   return <>
-  <div className="welcome-row"><div><div className="eyebrow">NATIONAL OVERVIEW</div><h1>Executive Dashboard</h1><p className="subtitle">A consolidated view of irrigation scheme development and performance.</p></div><div className="period-select"><CalendarDays size={15}/> Reporting period <strong>November 2026</strong><ChevronDown size={14}/></div></div>
+  <div className="welcome-row"><div><div className="eyebrow">NATIONAL OVERVIEW</div><h1>Executive Dashboard</h1><p className="subtitle">National oversight of irrigation delivery, water security, infrastructure condition and scheme performance.</p></div><div className="period-select"><CalendarDays size={15}/> Reporting period <strong>November 2026</strong><ChevronDown size={14}/></div></div>
   <div className="data-note"><CircleHelp size={15}/><span><strong>Prototype data</strong> — figures shown are illustrative and not official national statistics.</span></div>
   <section className="panel" style={{padding:16,marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}><div><div className="eyebrow">MASTER REGISTER · LOCAL BROWSER DATA</div><strong style={{fontSize:20}}>{registeredCount} registered schemes</strong><p className="subtitle" style={{margin:"4px 0 0"}}>Count reflects the Scheme Registry stored in this browser, if available.</p></div><button className="ghost-btn" onClick={()=>onSelect("registry")}>Open Scheme Registry <ArrowUpRight size={15}/></button></section>
+  <section className="panel schemes-panel" style={{marginBottom:9}}>
+    <div className="panel-head"><div><div className="eyebrow">MINISTERIAL OVERSIGHT</div><h2>Executive decision brief</h2><p>Key questions for national irrigation programme oversight</p></div><span className="live-label"><i/> Prototype briefing</span></div>
+    <div className="table-wrap"><table><thead><tr><th>Oversight area</th><th>Question for review</th><th>Workspace</th></tr></thead><tbody>
+      <tr><td><strong>National delivery</strong></td><td>Are developed, equipped and currently irrigated areas being reported separately and progressing against approved targets?</td><td><button className="ghost-btn" onClick={()=>onSelect('projects')}>Project delivery <ArrowUpRight size={13}/></button></td></tr>
+      <tr><td><strong>Water security</strong></td><td>Which schemes report water-source constraints, and have the observations been verified?</td><td><button className="ghost-btn" onClick={()=>onSelect('water')}>Water resources <ArrowUpRight size={13}/></button></td></tr>
+      <tr><td><strong>Infrastructure readiness</strong></td><td>Which assets require condition assessment, maintenance planning or rehabilitation follow-up?</td><td><button className="ghost-btn" onClick={()=>onSelect('infrastructure')}>Infrastructure <ArrowUpRight size={13}/></button></td></tr>
+      <tr><td><strong>National data confidence</strong></td><td>Are provincial submissions linked to a permanent Scheme ID, verified and traceable to their source?</td><td><button className="ghost-btn" onClick={()=>onSelect('registry')}>Scheme registry <ArrowUpRight size={13}/></button></td></tr>
+    </tbody></table></div>
+    <div className="reg-foot">Decision-support framework only. The current prototype contains illustrative records and does not provide verified national status, recommendations or approvals.</div>
+  </section>
   <div className="kpi-grid">{kpis.map(k=><KPI key={k.title} item={k}/>)}</div>
   <div className="status-kpi-grid">{[['Operational','1,327','green'],['Functional','822','blue'],['Partially functional','266','amber'],['Under rehabilitation','178','cyan'],['Non-functional','61','red']].map(([label,value,tint])=><div className="status-kpi" key={label}><span className={'status-kpi-icon '+tint}><CircleDot size={15}/></span><div><small>{label}</small><strong>{value}</strong></div></div>)}</div>
 
