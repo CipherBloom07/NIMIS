@@ -1,8 +1,17 @@
 const QUEUE_KEY='nimis-sync-queue-v1';
 const SOURCE_KEY='nimis-sync-endpoint-v1';
 export function readSyncQueue(){try{const value=JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]');return Array.isArray(value)?value:[]}catch{return[]}}
-export function enqueueSyncChange(entity,operation,record){try{const queue=readSyncQueue();queue.push({eventId:globalThis.crypto?.randomUUID?.()||`evt-${Date.now()}-${Math.random().toString(36).slice(2)}`,entity,operation,record,createdAt:new Date().toISOString(),status:'pending'});localStorage.setItem(QUEUE_KEY,JSON.stringify(queue))}catch(error){console.warn('NIMIS sync queue unavailable',error)}}
-export function saveSyncQueue(queue){localStorage.setItem(QUEUE_KEY,JSON.stringify(queue))}
+export function enqueueSyncChange(entity,operation,record){try{const queue=readSyncQueue();queue.push({eventId:globalThis.crypto?.randomUUID?.()||`evt-${Date.now()}-${Math.random().toString(36).slice(2)}`,entity,operation,record,createdAt:new Date().toISOString(),status:'pending'});localStorage.setItem(QUEUE_KEY,JSON.stringify(queue));window.dispatchEvent(new Event('nimis-sync-queue-updated'))}catch(error){console.warn('NIMIS sync queue unavailable',error)}}
+export function saveSyncQueue(queue){localStorage.setItem(QUEUE_KEY,JSON.stringify(queue));window.dispatchEvent(new Event('nimis-sync-queue-updated'))}
 export function readSyncEndpoint(){try{return localStorage.getItem(SOURCE_KEY)||''}catch{return''}}
 export function saveSyncEndpoint(value){localStorage.setItem(SOURCE_KEY,value.trim())}
 export async function synchronizePending(){const endpoint=readSyncEndpoint();if(!endpoint)throw new Error('Configure the approved NIMIS API endpoint before synchronizing.');let url;try{url=new URL(endpoint)}catch{throw new Error('Enter a valid API URL.')}if(url.protocol!=='https:'&&url.hostname!=='localhost'&&url.hostname!=='127.0.0.1')throw new Error('Use HTTPS for a remote synchronization endpoint.');const queue=readSyncQueue().filter(item=>item.status!=='synced');if(!queue.length)return{sent:0,remaining:0};const response=await fetch(url.toString(),{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({schemaVersion:'1.0',client:'NIMIS-web-prototype',events:queue})});if(!response.ok)throw new Error(`Synchronization endpoint returned HTTP ${response.status}.`);const result=await response.json().catch(()=>({}));const accepted=new Set(Array.isArray(result.acceptedEventIds)?result.acceptedEventIds:[]);const updated=readSyncQueue().map(item=>accepted.has(item.eventId)?{...item,status:'synced',syncedAt:new Date().toISOString()}:item);saveSyncQueue(updated);return{sent:accepted.size,remaining:updated.filter(item=>item.status!=='synced').length}}
+
+let syncInFlight=null;
+export async function synchronizeIfConfigured(){
+ if(typeof navigator!=='undefined'&&!navigator.onLine)return{sent:0,remaining:readSyncQueue().filter(item=>item.status!=='synced').length,offline:true};
+ if(!readSyncEndpoint()||!readSyncQueue().some(item=>item.status!=='synced'))return{sent:0,remaining:readSyncQueue().filter(item=>item.status!=='synced').length,skipped:true};
+ if(syncInFlight)return syncInFlight;
+ syncInFlight=synchronizePending().finally(()=>{syncInFlight=null});
+ return syncInFlight;
+}
