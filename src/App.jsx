@@ -81,9 +81,13 @@ function ZimbabweMap({ compact=false }) {
   </div>;
 }
 
-function Dashboard({ onSelect }) { return <>
+function Dashboard({ onSelect }) {
+  const [registeredCount,setRegisteredCount]=useState(schemes.length);
+  useEffect(()=>{try{const saved=JSON.parse(window.localStorage.getItem('nimis-registry-v1'));if(Array.isArray(saved))setRegisteredCount(saved.length)}catch{}},[]);
+  return <>
   <div className="welcome-row"><div><div className="eyebrow">NATIONAL OVERVIEW</div><h1>Executive Dashboard</h1><p className="subtitle">A consolidated view of irrigation scheme development and performance.</p></div><div className="period-select"><CalendarDays size={15}/> Reporting period <strong>November 2026</strong><ChevronDown size={14}/></div></div>
   <div className="data-note"><CircleHelp size={15}/><span><strong>Prototype data</strong> — figures shown are illustrative and not official national statistics.</span></div>
+  <section className="panel" style={{padding:16,marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}><div><div className="eyebrow">MASTER REGISTER · LOCAL BROWSER DATA</div><strong style={{fontSize:20}}>{registeredCount} registered schemes</strong><p className="subtitle" style={{margin:"4px 0 0"}}>Count reflects the Scheme Registry stored in this browser, if available.</p></div><button className="ghost-btn" onClick={()=>onSelect("registry")}>Open Scheme Registry <ArrowUpRight size={15}/></button></section>
   <div className="kpi-grid">{kpis.map(k=><KPI key={k.title} item={k}/>)}</div>
   <div className="status-kpi-grid">{[['Operational','1,327','green'],['Functional','822','blue'],['Partially functional','266','amber'],['Under rehabilitation','178','cyan'],['Non-functional','61','red']].map(([label,value,tint])=><div className="status-kpi" key={label}><span className={'status-kpi-icon '+tint}><CircleDot size={15}/></span><div><small>{label}</small><strong>{value}</strong></div></div>)}</div>
 
