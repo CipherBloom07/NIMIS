@@ -985,3 +985,57 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .province-donut{width:120px;height:120px;flex-basis:120px}
   .province-donut>div{width:74px;height:74px}
 }
+
+
+/* Operational workspaces — consistency and hierarchy */
+.module-insights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}
+.insight-panel,.module-insights>.panel{min-width:0}
+.insight-list,.workflow-legend{padding:12px 14px}
+.insight-row{padding:10px 0;border-bottom:1px solid #edf1ee}
+.insight-row:last-child{border-bottom:0}
+.insight-row>div:first-child{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:6px}
+.insight-row span{color:#526157;font-size:11px}
+.insight-row strong{font-size:12px;color:#293c30;font-weight:650}
+.insight-track,.readiness-track{height:5px;border-radius:3px;background:#edf1ee;overflow:hidden}
+.insight-track i,.readiness-track i{display:block;height:100%;background:var(--nimis-green,#08783e);border-radius:inherit}
+.workflow-total{padding:12px 14px 7px;display:flex;align-items:baseline;gap:8px}
+.workflow-total strong{font-size:23px;font-weight:650;color:#283b30}
+.workflow-total span{font-size:10px;color:#738078}
+.workflow-stack{margin:5px 14px 12px;display:flex;height:8px;gap:2px;border-radius:2px;overflow:hidden;background:#eef2ef}
+.workflow-segment{display:block;height:100%;min-width:2px}
+.segment-0{background:#08783e}.segment-1{background:#174a78}.segment-2{background:#c89e19}.segment-3{background:#c9332b}.segment-4{background:#839188}
+.workflow-legend{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.workflow-legend>div{display:flex;align-items:center;gap:7px;min-width:0}
+.workflow-legend i{width:7px;height:7px;border-radius:2px;flex:none}
+.workflow-legend span{font-size:10px;color:#647169;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.workflow-legend strong{font-size:10px;color:#34483b}
+.module-page .panel-head,.registry-page .panel-head,.data-management-page .panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.module-page .panel-head>svg{color:var(--nimis-green,#08783e);flex:none}
+.gis-map-panel{overflow:hidden}
+.gis-map-panel .panel-head{background:#fff}
+.nimis-map-wrap{position:relative;min-width:0;background:#e9eeea}
+.nimis-map .leaflet-control-zoom a{color:#2b4837}
+.map-caption,.map-legend{background:#fff;border:1px solid #dce4de;box-shadow:0 1px 4px #24392d12;border-radius:3px}
+.map-source-note{background:#f8faf8;border-top:1px solid #e5ebe6;color:#7a887f;padding:7px 10px}
+.reg-empty,.chart-empty-state{background:#fafcfb}
+.reg-empty{border-top:1px solid #edf1ee}
+.reg-modal-head{border-bottom:1px solid #e5ebe6}
+.reg-modal-actions{border-top:1px solid #e5ebe6}
+.data-ops-body>p{font-size:11px;line-height:1.65;color:#58665d}
+.data-ops-body .muted-copy{display:block;font-size:10px;line-height:1.55;color:#78857d}
+.import-result{border:1px solid #e0e8e2;background:#f8faf8;border-radius:4px;padding:10px}
+.import-result span{font-size:10px;line-height:1.45}
+.sync-explainer{border:1px solid #e2e9e4;border-left:3px solid var(--nimis-green,#08783e);background:#f8faf8;padding:10px;border-radius:3px}
+.sync-explainer li{font-size:10px;line-height:1.55;color:#536258}
+.reg-foot{padding:9px 12px;border-top:1px solid #edf1ee;color:#75827a}
+@media(max-width:900px){
+ .module-insights{grid-template-columns:1fr}
+ .workflow-legend{grid-template-columns:1fr 1fr}
+}
+@media(max-width:560px){
+ .module-insights{gap:9px;margin:9px 0}
+ .insight-list,.workflow-legend{padding:10px}
+ .insight-row{padding:9px 0}
+ .workflow-legend{grid-template-columns:1fr}
+ .workflow-total strong{font-size:20px}
+}
