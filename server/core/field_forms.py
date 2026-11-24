@@ -479,3 +479,45 @@ def decide_field_form(event_id:UUID,body:FieldReviewDecision,user=Depends(actor)
     return {"outcome":"accepted","event_id":str(event_id),
             "decision_id":str(body.decision_id),"status":to_status,
             "official":False}
+
+
+@router.get("/sync/status/{event_id}")
+def field_form_sync_status(event_id:UUID,user=Depends(actor)):
+    """Private acknowledgement/review status; collector sees only own receipts."""
+    need_role(user,"admin","provincial_officer","district_officer","data_collector")
+    with db() as conn:
+        row=conn.execute(
+          """SELECT f.event_id,f.collector_id,f.status,f.evidence_pending,
+                    f.form_id,f.form_version,f.scheme_id,f.record_id,f.revision,
+                    s.province_code,s.district_code,f.payload
+             FROM nimis_stage.field_form_submission f
+             LEFT JOIN nimis_stage.scheme s ON s.scheme_id=f.scheme_id
+             WHERE f.event_id=%s""",(event_id,),
+        ).fetchone()
+        if not row:raise HTTPException(404,detail="Receipt not found")
+        if row["scheme_id"] is None:
+            province,district=row["payload"].get("province"),row["payload"].get("district")
+        else:province,district=row["province_code"],row["district_code"]
+        if user["role_code"]=="data_collector":
+            permitted=row["collector_id"]==user["actor_id"]
+        else:
+            permitted=in_scope(user,province,district)
+        if not permitted:raise HTTPException(404,detail="Receipt not found")
+        history=conn.execute(
+          """SELECT action,to_status,reason,decided_at
+             FROM nimis_stage.field_form_decision
+             WHERE submission_event_id=%s ORDER BY decided_at,decision_id""",
+          (event_id,),
+        ).fetchall()
+    return {
+      "source":"ISOLATED_DEVELOPMENT","official":False,
+      "event_id":str(row["event_id"]),
+      "record_id":str(row["record_id"]),
+      "revision":row["revision"],"form_id":row["form_id"],
+      "scheme_id":str(row["scheme_id"]) if row["scheme_id"] else None,
+      "status":row["status"],"evidence_pending":row["evidence_pending"],
+      "decisions":[{
+         "action":x["action"],"status":x["to_status"],"reason":x["reason"],
+         "decided_at":x["decided_at"].isoformat(),
+      } for x in history],
+    }
