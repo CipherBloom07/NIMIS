@@ -71,3 +71,14 @@ test('all JSX modules include a React binding for classic JSX runtime',()=>{
     assert.match(content,/import\s+React\b/,name+' must import React when JSX is transformed by Vite');
   }
 });
+
+test('balanced-scale UI has normal desktop typography and responsive layout',()=>{
+  const main=readFileSync('src/main.jsx','utf8');
+  const css=readFileSync('src/balanced-scale.css','utf8');
+  assert.match(main,/import '\.\/balanced-scale\.css'/);
+  assert.match(css,/body\{font-size:13px!important/);
+  assert.match(css,/\.app-shell>\.sidebar\{width:224px!important/);
+  assert.match(css,/font-size:12px!important/);
+  assert.match(css,/@media\(max-width:1080px\)/);
+  assert.match(css,/\.app-shell>\.main-area\{margin-left:0!important;width:100%!important\}/);
+});
