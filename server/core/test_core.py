@@ -785,7 +785,7 @@ def test_returned_form_correction_preserves_lineage_and_blocks_unapproved_overwr
              FROM nimis_stage.field_form_submission
              WHERE record_id=%s ORDER BY revision""",(record,),
         ).fetchall()
-        assert [(x["revision"],x["status"],x["level"]) for x in rows]==[
+        assert [(x[0],x[1],x[2]) for x in rows]==[
           (1,"RETURNED","2.1"),(2,"AWAITING_FORM_APPROVAL","2.5")]
         assert conn.execute(
           "SELECT revision FROM nimis_stage.scheme WHERE scheme_id=%s",
