@@ -2,7 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {Upload,Download,RefreshCw,AlertCircle,FileSpreadsheet,ShieldCheck} from 'lucide-react';
 import {readSyncQueue,saveSyncQueue,readSyncEndpoint,saveSyncEndpoint,synchronizePending,enqueueSyncChange} from './dataSync.js';
 const registryKey='nimis-registry-v1';
-const seed=[{id:'NIM-MAN-001',name:'Chisumbanje',province:'Manicaland',district:'Chisumbanje',water:'River / canal',status:'Operational',developed:2780,equipped:2500,irrigated:2200},{id:'NIM-MAN-014',name:'Tongogara',province:'Manicaland',district:'Chipinge',water:'Dam',status:'Operational',developed:1640,equipped:1200,irrigated:880},{id:'NIM-MID-008',name:'Insukamini',province:'Midlands',district:'Kwekwe',water:'Dam',status:'Under rehabilitation',developed:820,equipped:600,irrigated:350},{id:'NIM-MAS-002',name:'Mushandike',province:'Masvingo',district:'Masvingo',water:'Dam',status:'Operational',developed:1125,equipped:980,irrigated:920},{id:'NIM-MAN-022',name:'Nyanyadzi',province:'Manicaland',district:'Nyanyadzi',water:'River',status:'Operational',developed:560,equipped:480,irrigated:320}];
+const seed=[]; // No hidden sample national records. Existing browser records are untouched.
 
 const template='id,name,province,district,water,status,developed,equipped,irrigated\nNIM-MAN-NEW-001,Example scheme,Manicaland,Chipinge,Dam,Operational,100,80,60';
 const provinces=['Bulawayo','Harare','Manicaland','Mashonaland Central','Mashonaland East','Mashonaland West','Masvingo','Matabeleland North','Matabeleland South','Midlands'];
