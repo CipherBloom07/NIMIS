@@ -1,0 +1,617 @@
+{
+  "status": "UNAPPROVED_LOCAL_STAGE_ONLY",
+  "source": "NIMIS Collect schemas/form-catalogue.v1.json",
+  "forms": [
+    {
+      "form_id": "baseline",
+      "form_version": 1,
+      "fields": [
+        {
+          "field_id": "site_name",
+          "type": "text",
+          "units": null
+        },
+        {
+          "field_id": "scheme_name",
+          "type": "text",
+          "units": null
+        },
+        {
+          "field_id": "scheme_gps",
+          "type": "point",
+          "units": null
+        },
+        {
+          "field_id": "scheme_photo",
+          "type": "photo",
+          "units": null
+        },
+        {
+          "field_id": "province",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "district",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "ward",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "officers",
+          "type": "repeating_group",
+          "units": null
+        },
+        {
+          "field_id": "equipped_area_ha",
+          "type": "measurement:ha",
+          "units": "ha"
+        },
+        {
+          "field_id": "expansion_area_ha",
+          "type": "measurement:ha",
+          "units": "ha"
+        },
+        {
+          "field_id": "functional_area_ha",
+          "type": "measurement:ha",
+          "units": "ha"
+        },
+        {
+          "field_id": "water_sources",
+          "type": "repeating_group",
+          "units": null
+        },
+        {
+          "field_id": "beneficiaries",
+          "type": "integer",
+          "units": null
+        },
+        {
+          "field_id": "irrigation_system",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "energy_source",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "infrastructure",
+          "type": "repeating_group",
+          "units": null
+        },
+        {
+          "field_id": "maintenance",
+          "type": "group",
+          "units": null
+        },
+        {
+          "field_id": "water_management",
+          "type": "group",
+          "units": null
+        },
+        {
+          "field_id": "weather_station",
+          "type": "group",
+          "units": null
+        },
+        {
+          "field_id": "major_crops",
+          "type": "multi",
+          "units": null
+        },
+        {
+          "field_id": "challenges",
+          "type": "multi",
+          "units": null
+        }
+      ]
+    },
+    {
+      "form_id": "operational_status",
+      "form_version": 1,
+      "fields": [
+        {
+          "field_id": "status",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "equipped_area_ha",
+          "type": "measurement:ha",
+          "units": "ha"
+        },
+        {
+          "field_id": "developed_area_ha",
+          "type": "measurement:ha",
+          "units": "ha"
+        },
+        {
+          "field_id": "functional_area_ha",
+          "type": "measurement:ha",
+          "units": "ha"
+        },
+        {
+          "field_id": "actually_irrigated_area_ha",
+          "type": "measurement:ha",
+          "units": "ha"
+        },
+        {
+          "field_id": "nonfunctional_reason",
+          "type": "text",
+          "units": null
+        },
+        {
+          "field_id": "active_beneficiaries",
+          "type": "integer",
+          "units": null
+        },
+        {
+          "field_id": "main_issues",
+          "type": "multi",
+          "units": null
+        },
+        {
+          "field_id": "observed_at",
+          "type": "datetime",
+          "units": null
+        },
+        {
+          "field_id": "source",
+          "type": "choice",
+          "units": null
+        }
+      ]
+    },
+    {
+      "form_id": "seasonal_production",
+      "form_version": 1,
+      "fields": [
+        {
+          "field_id": "season_id",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "crop_id",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "planted_area_ha",
+          "type": "measurement:ha",
+          "units": "ha"
+        },
+        {
+          "field_id": "harvested_area_ha",
+          "type": "measurement:ha",
+          "units": "ha"
+        },
+        {
+          "field_id": "yield",
+          "type": "measurement:tonnes_per_ha",
+          "units": "tonnes_per_ha"
+        },
+        {
+          "field_id": "production",
+          "type": "measurement:tonnes",
+          "units": "tonnes"
+        },
+        {
+          "field_id": "market_destination",
+          "type": "text",
+          "units": null
+        },
+        {
+          "field_id": "observed_at",
+          "type": "datetime",
+          "units": null
+        },
+        {
+          "field_id": "source",
+          "type": "choice",
+          "units": null
+        }
+      ]
+    },
+    {
+      "form_id": "water_availability",
+      "form_version": 1,
+      "fields": [
+        {
+          "field_id": "water_source_id",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "reading_type",
+          "type": "choice:gauge_visual_estimate",
+          "units": null
+        },
+        {
+          "field_id": "water_level",
+          "type": "measurement:m",
+          "units": "m"
+        },
+        {
+          "field_id": "storage_percent",
+          "type": "measurement:percent",
+          "units": "percent"
+        },
+        {
+          "field_id": "flow",
+          "type": "measurement:m3_per_s",
+          "units": "m3_per_s"
+        },
+        {
+          "field_id": "abstraction_volume",
+          "type": "measurement:m3",
+          "units": "m3"
+        },
+        {
+          "field_id": "rainfall",
+          "type": "measurement:mm",
+          "units": "mm"
+        },
+        {
+          "field_id": "observed_at",
+          "type": "datetime",
+          "units": null
+        },
+        {
+          "field_id": "source",
+          "type": "choice",
+          "units": null
+        }
+      ]
+    },
+    {
+      "form_id": "infrastructure_incident",
+      "form_version": 1,
+      "fields": [
+        {
+          "field_id": "asset_id",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "asset_class",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "condition",
+          "type": "choice:good_moderate_bad",
+          "units": null
+        },
+        {
+          "field_id": "severity",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "incident_description",
+          "type": "text",
+          "units": null
+        },
+        {
+          "field_id": "photo_ids",
+          "type": "attachments",
+          "units": null
+        },
+        {
+          "field_id": "mitigation",
+          "type": "text",
+          "units": null
+        },
+        {
+          "field_id": "responsible_officer_id",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "closure_evidence",
+          "type": "attachments",
+          "units": null
+        },
+        {
+          "field_id": "observed_at",
+          "type": "datetime",
+          "units": null
+        }
+      ]
+    },
+    {
+      "form_id": "om_finance",
+      "form_version": 1,
+      "fields": [
+        {
+          "field_id": "maintenance_activities",
+          "type": "repeating_group",
+          "units": null
+        },
+        {
+          "field_id": "work_order_ids",
+          "type": "reference_list",
+          "units": null
+        },
+        {
+          "field_id": "expenditure",
+          "type": "measurement:USD_or_ZWG",
+          "units": "USD_or_ZWG"
+        },
+        {
+          "field_id": "farmer_contributions",
+          "type": "measurement:USD_or_ZWG",
+          "units": "USD_or_ZWG"
+        },
+        {
+          "field_id": "levy_paid",
+          "type": "choice:yes_no",
+          "units": null
+        },
+        {
+          "field_id": "om_fund_balance",
+          "type": "measurement:USD_or_ZWG",
+          "units": "USD_or_ZWG"
+        },
+        {
+          "field_id": "observed_at",
+          "type": "datetime",
+          "units": null
+        },
+        {
+          "field_id": "source",
+          "type": "choice",
+          "units": null
+        }
+      ]
+    },
+    {
+      "form_id": "energy_power",
+      "form_version": 1,
+      "fields": [
+        {
+          "field_id": "energy_source",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "grid_connected",
+          "type": "choice:yes_no",
+          "units": null
+        },
+        {
+          "field_id": "meter_reference",
+          "type": "text",
+          "units": null
+        },
+        {
+          "field_id": "solar_status",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "outage_hours",
+          "type": "measurement:hours",
+          "units": "hours"
+        },
+        {
+          "field_id": "bill_status",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "observed_at",
+          "type": "datetime",
+          "units": null
+        },
+        {
+          "field_id": "source",
+          "type": "choice",
+          "units": null
+        }
+      ]
+    },
+    {
+      "form_id": "project_update",
+      "form_version": 1,
+      "fields": [
+        {
+          "field_id": "programme",
+          "type": "choice:SI87_B1_B2_B3_B4_SIRP_other",
+          "units": null
+        },
+        {
+          "field_id": "project_id",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "target_area_ha",
+          "type": "measurement:ha",
+          "units": "ha"
+        },
+        {
+          "field_id": "substantially_complete_ha",
+          "type": "measurement:ha",
+          "units": "ha"
+        },
+        {
+          "field_id": "progress_percent",
+          "type": "measurement:percent",
+          "units": "percent"
+        },
+        {
+          "field_id": "milestone_status",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "contractor_id",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "power_connection_status",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "risks_delays",
+          "type": "text",
+          "units": null
+        },
+        {
+          "field_id": "photos",
+          "type": "attachments",
+          "units": null
+        },
+        {
+          "field_id": "observed_at",
+          "type": "datetime",
+          "units": null
+        }
+      ]
+    },
+    {
+      "form_id": "risk_register",
+      "form_version": 1,
+      "fields": [
+        {
+          "field_id": "risk_id",
+          "type": "reference_or_uuid",
+          "units": null
+        },
+        {
+          "field_id": "risk_description",
+          "type": "text",
+          "units": null
+        },
+        {
+          "field_id": "severity",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "mitigation",
+          "type": "text",
+          "units": null
+        },
+        {
+          "field_id": "responsible_officer_id",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "status",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "review_date",
+          "type": "date",
+          "units": null
+        }
+      ]
+    },
+    {
+      "form_id": "farmer_plot",
+      "form_version": 1,
+      "fields": [
+        {
+          "field_id": "beneficiary_reference",
+          "type": "pseudonymous_reference",
+          "units": null
+        },
+        {
+          "field_id": "plot_id",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "plot_area_ha",
+          "type": "measurement:ha",
+          "units": "ha"
+        },
+        {
+          "field_id": "tenure",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "occupancy",
+          "type": "choice",
+          "units": null
+        },
+        {
+          "field_id": "enrolled_at",
+          "type": "datetime",
+          "units": null
+        },
+        {
+          "field_id": "source",
+          "type": "choice",
+          "units": null
+        }
+      ]
+    },
+    {
+      "form_id": "new_scheme_request",
+      "form_version": 1,
+      "fields": [
+        {
+          "field_id": "temporary_client_id",
+          "type": "uuid",
+          "units": null
+        },
+        {
+          "field_id": "scheme_name",
+          "type": "text",
+          "units": null
+        },
+        {
+          "field_id": "province",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "district",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "ward",
+          "type": "reference",
+          "units": null
+        },
+        {
+          "field_id": "scheme_gps",
+          "type": "point",
+          "units": null
+        },
+        {
+          "field_id": "scheme_photo",
+          "type": "photo",
+          "units": null
+        },
+        {
+          "field_id": "justification",
+          "type": "text",
+          "units": null
+        },
+        {
+          "field_id": "duplicate_candidates",
+          "type": "reference_list",
+          "units": null
+        }
+      ]
+    }
+  ]
+}

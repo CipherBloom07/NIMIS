@@ -31,6 +31,12 @@ CREATE TABLE IF NOT EXISTS nimis_stage.scheme (
  updated_at timestamptz NOT NULL DEFAULT now(),
  CHECK (functional_ha IS NULL OR equipped_ha IS NULL OR functional_ha<=equipped_ha)
 );
+-- External OIDC subject is provisioned only by authorized ICT administrators.
+-- The existing actor role/geographic assignments remain database-owned.
+ALTER TABLE nimis_stage.actor ADD COLUMN IF NOT EXISTS oidc_subject text;
+CREATE UNIQUE INDEX IF NOT EXISTS actor_oidc_subject_unique
+ ON nimis_stage.actor(oidc_subject) WHERE oidc_subject IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS scheme_geography_idx ON nimis_stage.scheme(province_code,district_code);
 CREATE TABLE IF NOT EXISTS nimis_stage.assignment (
  scheme_id uuid NOT NULL REFERENCES nimis_stage.scheme(scheme_id),
@@ -62,6 +68,19 @@ CREATE TABLE IF NOT EXISTS nimis_stage.submission (
  is_demo boolean NOT NULL DEFAULT true,
  CHECK (octet_length(payload::text)<=524288)
 );
+-- Private photo evidence in isolated stage DB; never public static hosting.
+CREATE TABLE IF NOT EXISTS nimis_stage.field_attachment (
+ photo_id uuid PRIMARY KEY,
+ uploaded_by uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
+ scheme_id uuid NOT NULL REFERENCES nimis_stage.scheme(scheme_id),
+ mime_type text NOT NULL CHECK (mime_type IN ('image/jpeg','image/png','image/webp')),
+ sha256 char(64) NOT NULL,
+ content bytea NOT NULL CHECK (octet_length(content) BETWEEN 1 AND 524288),
+ uploaded_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS field_attachment_owner ON nimis_stage.field_attachment(uploaded_by,scheme_id);
+REVOKE ALL ON nimis_stage.field_attachment FROM PUBLIC;
+
 -- Existing local Stage 1 clusters can be extended without deleting records.
 ALTER TABLE nimis_stage.submission
  ADD COLUMN IF NOT EXISTS prior_submission_id uuid REFERENCES nimis_stage.submission(submission_id);
@@ -98,4 +117,89 @@ CREATE TABLE IF NOT EXISTS nimis_stage.audit (
 );
 -- This migration contains NO official irrigation records and creates no accounts.
 -- No rights are granted to PUBLIC or clients; backend uses an approved limited DB identity later.
+COMMIT;
+
+-- Review-only NIMIS Core extension for collection of proposed field-form datasets.
+-- Applied solely to isolated nimis_core_dev. Never modifies scheme master or
+-- publishes unverified/unapproved values into national reporting views.
+BEGIN;
+CREATE TABLE IF NOT EXISTS nimis_stage.field_form_submission(
+ event_id uuid PRIMARY KEY,
+ record_id uuid NOT NULL,
+ revision integer NOT NULL CHECK(revision>0),
+ scheme_id uuid REFERENCES nimis_stage.scheme(scheme_id),
+ collector_id uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
+ device_id uuid NOT NULL,
+ form_id text NOT NULL,
+ form_version integer NOT NULL CHECK(form_version>0),
+ period_code text NOT NULL,
+ captured_at timestamptz NOT NULL,
+ observed_at timestamptz NOT NULL,
+ source text NOT NULL CHECK(length(btrim(source))>0),
+ base_scheme_revision bigint,
+ payload jsonb NOT NULL CHECK(jsonb_typeof(payload)='object' AND octet_length(payload::text)<=131072),
+ content_sha256 char(64) NOT NULL,
+ status text NOT NULL DEFAULT 'AWAITING_FORM_APPROVAL'
+  CHECK(status IN ('AWAITING_FORM_APPROVAL','SCHEME_REVISION_CONFLICT','EVIDENCE_PENDING','DISTRICT_VERIFIED','PROVINCIAL_REVIEWED','TECHNICAL_APPROVED','PUBLISHED','RETURNED')),
+ evidence_pending boolean NOT NULL DEFAULT false,
+ received_at timestamptz NOT NULL DEFAULT now(),
+ CHECK (scheme_id IS NOT NULL OR form_id='new_scheme_request'),
+ UNIQUE(record_id,revision)
+);
+CREATE INDEX IF NOT EXISTS field_form_scheme_period
+ ON nimis_stage.field_form_submission(scheme_id,form_id,period_code,received_at DESC);
+CREATE INDEX IF NOT EXISTS field_form_collector
+ ON nimis_stage.field_form_submission(collector_id,received_at DESC);
+REVOKE ALL ON nimis_stage.field_form_submission FROM PUBLIC;
+-- Only the reviewed local stage runtime may SELECT/INSERT. No UPDATE/DELETE.
+COMMIT;
+
+-- Form review objects are created AFTER the field_form_submission table.
+BEGIN;
+-- Per-form authorization requires institutional form approval and separately
+-- authorized national technical delegation; no approvals are seeded.
+CREATE TABLE IF NOT EXISTS nimis_stage.approved_field_form (
+ form_id text NOT NULL,
+ form_version integer NOT NULL CHECK(form_version>0),
+ approved_by uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
+ approved_at timestamptz NOT NULL DEFAULT now(),
+ reporting_mapping_approved boolean NOT NULL DEFAULT false,
+ PRIMARY KEY(form_id,form_version)
+);
+CREATE TABLE IF NOT EXISTS nimis_stage.actor_permission (
+ actor_id uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
+ permission_code text NOT NULL CHECK(permission_code IN ('NATIONAL_TECHNICAL_APPROVE')),
+ granted_by uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
+ granted_at timestamptz NOT NULL DEFAULT now(),
+ revoked_at timestamptz,
+ PRIMARY KEY(actor_id,permission_code)
+);
+REVOKE ALL ON nimis_stage.approved_field_form FROM PUBLIC;
+REVOKE ALL ON nimis_stage.actor_permission FROM PUBLIC;
+
+-- Safe migration of earlier isolated staging states, without deleting rows.
+ALTER TABLE nimis_stage.field_form_submission
+ DROP CONSTRAINT IF EXISTS field_form_submission_status_check;
+ALTER TABLE nimis_stage.field_form_submission
+ ADD CONSTRAINT field_form_submission_status_check
+ CHECK(status IN (
+  'AWAITING_FORM_APPROVAL','SCHEME_REVISION_CONFLICT','EVIDENCE_PENDING',
+  'DISTRICT_VERIFIED','PROVINCIAL_REVIEWED','TECHNICAL_APPROVED','PUBLISHED','RETURNED'
+ ));
+CREATE TABLE IF NOT EXISTS nimis_stage.field_form_decision (
+ decision_id uuid PRIMARY KEY,
+ submission_event_id uuid NOT NULL REFERENCES nimis_stage.field_form_submission(event_id),
+ actor_id uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
+ action text NOT NULL CHECK(action IN ('VERIFY','RETURN','REVIEW','TECHNICAL_APPROVE','PUBLISH')),
+ from_status text NOT NULL,
+ to_status text NOT NULL,
+ reason text,
+ decided_at timestamptz NOT NULL DEFAULT now(),
+ CHECK (action<>'RETURN' OR length(btrim(coalesce(reason,'')))>0)
+);
+CREATE INDEX IF NOT EXISTS field_form_decision_history
+ ON nimis_stage.field_form_decision(submission_event_id,decided_at DESC);
+REVOKE ALL ON nimis_stage.field_form_decision FROM PUBLIC;
+
+
 COMMIT;

@@ -28,11 +28,12 @@ app.add_middleware(
     allow_origins=[
         "http://127.0.0.1:8110", "http://localhost:8110",
         "http://127.0.0.1:5173", "http://localhost:5173",
+        "http://127.0.0.1:5191", "http://localhost:5191",
         "http://127.0.0.1:8081", "http://localhost:8081",
     ],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PATCH"],
-    allow_headers=["X-Nimis-Dev-Actor", "Content-Type"],
+    allow_methods=["GET", "POST", "PATCH", "PUT"],
+    allow_headers=["X-Nimis-Dev-Actor", "Content-Type", "Authorization", "X-Content-SHA256"],
 )
 
 
@@ -56,8 +57,22 @@ def db():
     except psycopg.OperationalError:
         raise HTTPException(503, detail="Local PostgreSQL unavailable") from None
 
-def actor(request: Request, x_nimis_dev_actor: str | None = Header(default=None)):
+def actor(request: Request, x_nimis_dev_actor: str | None = Header(default=None),
+          authorization: str | None = Header(default=None)):
     guarded(request)
+    if os.environ.get("NIMIS_STAGE_OIDC_ENABLED") == "1":
+        # External JWT is used ONLY as identity proof. Server-owned roles,
+        # activation and geography come from the actor table, not JWT claims.
+        from server.core.oidc_identity import verified_subject
+        subject=verified_subject(authorization)
+        with db() as conn:
+            row=conn.execute(
+                "SELECT * FROM nimis_stage.actor WHERE oidc_subject=%s AND is_active=true",
+                (subject,),
+            ).fetchone()
+        if row is None:
+            raise HTTPException(403,detail="Institutional account not provisioned")
+        return row
     if os.environ.get("NIMIS_STAGE_DEV_AUTH") != "1":
         raise HTTPException(503, detail="No approved identity provider configured")
     try:
@@ -472,3 +487,7 @@ def published_area_report(
                    for p,values in sorted(provinces.items())],
       "page_limited":len(rows)==500,
     }
+
+# Review-only field form API: isolated stage service, never production publication.
+from server.core.field_forms import router as field_form_router
+app.include_router(field_form_router)

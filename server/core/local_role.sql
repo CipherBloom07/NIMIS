@@ -16,3 +16,14 @@ GRANT UPDATE(revoked_at,assigned_by) ON nimis_stage.assignment TO nimis_stage_de
 GRANT UPDATE(status,latest_decision_at) ON nimis_stage.submission TO nimis_stage_demo;
 GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA nimis_stage TO nimis_stage_demo;
 REVOKE CREATE ON SCHEMA nimis_stage FROM nimis_stage_demo;
+
+-- Read/insert only proposed unapproved field submissions; never update/delete.
+GRANT SELECT,INSERT ON nimis_stage.field_form_submission TO nimis_stage_demo;
+
+-- Evidence is immutable. No UPDATE or DELETE privileges.
+GRANT SELECT,INSERT ON nimis_stage.field_attachment TO nimis_stage_demo;
+
+-- Review runtime can read policy; cannot grant its own permission or approve its own forms.
+GRANT SELECT ON nimis_stage.approved_field_form,nimis_stage.actor_permission TO nimis_stage_demo;
+GRANT SELECT,INSERT ON nimis_stage.field_form_decision TO nimis_stage_demo;
+GRANT UPDATE(status) ON nimis_stage.field_form_submission TO nimis_stage_demo;
