@@ -19,3 +19,6 @@ REVOKE CREATE ON SCHEMA nimis_stage FROM nimis_stage_demo;
 
 -- Read/insert only proposed unapproved field submissions; never update/delete.
 GRANT SELECT,INSERT ON nimis_stage.field_form_submission TO nimis_stage_demo;
+
+-- Evidence is immutable. No UPDATE or DELETE privileges.
+GRANT SELECT,INSERT ON nimis_stage.field_attachment TO nimis_stage_demo;
