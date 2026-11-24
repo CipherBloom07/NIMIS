@@ -34,7 +34,8 @@ def env():
         conn.execute("GRANT USAGE ON SCHEMA nimis_stage TO nimis_stage_demo")
         conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA nimis_stage TO nimis_stage_demo")
         conn.execute("""GRANT INSERT ON nimis_stage.scheme,nimis_stage.assignment,
-          nimis_stage.submission,nimis_stage.decision,nimis_stage.audit TO nimis_stage_demo""")
+          nimis_stage.submission,nimis_stage.decision,nimis_stage.audit,
+          nimis_stage.field_form_submission TO nimis_stage_demo""")
         conn.execute("""GRANT UPDATE(scheme_name,operational_status,equipped_ha,developed_ha,functional_ha,
              revision,updated_at) ON nimis_stage.scheme TO nimis_stage_demo""")
         conn.execute("GRANT UPDATE(revoked_at,assigned_by) ON nimis_stage.assignment TO nimis_stage_demo")
@@ -262,3 +263,73 @@ def test_stale_scheme_creates_conflict_not_silent_overwrite(client):
     assert r.status_code==200,r.text
     assert r.json()["status"]=="CONFLICT"
     assert r.json()["server_scheme_revision"]==2
+
+def test_proposed_collector_form_sync_is_scoped_idempotent_and_stays_unapproved(client,env):
+    scheme=new_scheme(client)
+    now=datetime.now(timezone.utc).isoformat()
+    request={
+       "event_id":str(uuid4()),"record_id":str(uuid4()),"revision":1,
+       "device_id":str(uuid4()),"scheme_id":scheme,"form_id":"water_availability",
+       "form_version":1,"period_code":"2026-11",
+       "captured_at":now,"observed_at":now,"source":"Fictional gauge inspection",
+       "base_scheme_revision":1,
+       "answers":{"water_level":"3.4","flow":"0.20","rainfall":"12.5"},
+    }
+    target="/api/v1/stage/forms/sync/push"
+    def push(body,who="collector"):
+        return client.post(target,headers=headers(who),json={"operations":[body]})
+
+    forbidden=push(request)
+    assert forbidden.status_code==200
+    assert forbidden.json()["results"][0]["outcome"]=="rejected"
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+                       headers=headers("district"),json={"collector_id":ACTORS["collector"]}).status_code==200
+
+    first=push(request)
+    assert first.status_code==200,first.text
+    assert first.json()["results"][0]["outcome"]=="accepted"
+    repeated=push(request)
+    assert repeated.json()["results"][0]["outcome"]=="duplicate"
+    different=push({**request,"answers":{"water_level":"4.7"}})
+    assert different.json()["results"][0]["outcome"]=="conflict"
+
+    invalid=push({**request,"event_id":str(uuid4()),"record_id":str(uuid4()),
+                  "answers":{"unknown_property":"value"}})
+    assert invalid.json()["results"][0]["outcome"]=="rejected"
+    assert push(request,"province").status_code==403
+
+    district=client.get("/api/v1/stage/forms/inbox",headers=headers("district"))
+    assert district.status_code==200,district.text
+    item=next(x for x in district.json()["items"] if x["event_id"]==request["event_id"])
+    assert item["status"]=="AWAITING_FORM_APPROVAL"
+    invisible=client.get("/api/v1/stage/forms/inbox",headers=headers("other_district"))
+    assert not any(x["event_id"]==request["event_id"] for x in invisible.json()["items"])
+
+    with psycopg.connect(env) as conn:
+        count=conn.execute("SELECT count(*) FROM nimis_stage.field_form_submission WHERE event_id=%s",
+                           (request["event_id"],)).fetchone()[0]
+        assert count==1
+        status=conn.execute("SELECT status FROM nimis_stage.field_form_submission WHERE event_id=%s",
+                            (request["event_id"],)).fetchone()[0]
+        assert status=="AWAITING_FORM_APPROVAL"
+        master=conn.execute("SELECT revision FROM nimis_stage.scheme WHERE scheme_id=%s",(scheme,)).fetchone()[0]
+        assert master==1
+
+
+def test_new_scheme_proposal_never_creates_master_record(client,env):
+    now=datetime.now(timezone.utc).isoformat()
+    name="Proposed fictional "+uuid4().hex[:8]
+    body={
+       "event_id":str(uuid4()),"record_id":str(uuid4()),"revision":1,
+       "device_id":str(uuid4()),"scheme_id":None,"form_id":"new_scheme_request",
+       "form_version":1,"period_code":"2026-11","captured_at":now,
+       "observed_at":now,"source":"Fictional initial report",
+       "base_scheme_revision":None,
+       "answers":{"scheme_name":name,"province":"DEMO-P","district":"DEMO-D"},
+    }
+    r=client.post("/api/v1/stage/forms/sync/push",headers=headers("collector"),
+                  json={"operations":[body]})
+    assert r.status_code==200,r.text
+    assert r.json()["results"][0]["outcome"]=="accepted"
+    with psycopg.connect(env) as conn:
+        assert conn.execute("SELECT count(*) FROM nimis_stage.scheme WHERE scheme_name=%s",(name,)).fetchone()[0]==0
