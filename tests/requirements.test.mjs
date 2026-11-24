@@ -46,16 +46,39 @@ test('historical briefing is clearly not current dashboard data',()=>{
   assert.match(source,/not live NIMIS reporting/);
 });
 
-test('reference dashboard appearance is imported and the sample toggle cannot write to registry',()=>{
+test('readable NIMIS theme replaces compressed legacy styling and preserves demo isolation',()=>{
   const main=readFileSync('src/main.jsx','utf8');
-  const css=readFileSync('src/reference-fidelity.css','utf8');
+  const css=readFileSync('src/readable-ui.css','utf8');
   const dashboard=readFileSync('src/ExecutiveOverview.jsx','utf8');
-  assert.match(main,/reference-fidelity\.css/);
-  assert.match(css,/\.app-shell\s+\.topbar/);
-  assert.match(css,/background:linear-gradient\(100deg,#005031/);
+  assert.match(main,/readable-ui\.css/);
+  assert.doesNotMatch(main,/import ['"]\.\/reference-fidelity\.css['"]/);
+  assert.match(css,/font-size:13\.5px!important/);
   assert.match(css,/\.app-shell>\.sidebar/);
+  assert.match(css,/min-height:43px!important/);
+  assert.match(css,/width:calc\(100% - 268px\)!important/);
+  assert.match(css,/width:100%!important/);
+  assert.match(css,/@media\(max-width:700px\)/);
   assert.match(dashboard,/PREVIEW_SCHEMES/);
   assert.match(dashboard,/displayedRecords=preview\?PREVIEW_SCHEMES:records/);
   assert.match(dashboard,/FICTIONAL LAYOUT PREVIEW/);
   assert.doesNotMatch(dashboard,/localStorage\.setItem/);
+});
+
+test('all JSX modules include a React binding for classic JSX runtime',()=>{
+  const jsxNames=['App','DataManagement','DistrictInbox','ExecutiveOverview','HistoricalBriefing','NimisErrorBoundary','OfficialLogo','Registry','ReviewStageInbox','SchemeAssessment','main'];
+  for(const name of jsxNames){
+    const content=readFileSync('src/'+name+'.jsx','utf8');
+    assert.match(content,/import\s+React\b/,name+' must import React when JSX is transformed by Vite');
+  }
+});
+
+test('balanced-scale UI has normal desktop typography and responsive layout',()=>{
+  const main=readFileSync('src/main.jsx','utf8');
+  const css=readFileSync('src/balanced-scale.css','utf8');
+  assert.match(main,/import '\.\/balanced-scale\.css'/);
+  assert.match(css,/body\{font-size:13px!important/);
+  assert.match(css,/\.app-shell>\.sidebar\{width:224px!important/);
+  assert.match(css,/font-size:12px!important/);
+  assert.match(css,/@media\(max-width:1080px\)/);
+  assert.match(css,/\.app-shell>\.main-area\{margin-left:0!important;width:100%!important\}/);
 });
