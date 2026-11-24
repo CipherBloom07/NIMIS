@@ -205,6 +205,31 @@ def test_corrections_link_to_previous_revision_and_preserve_season_history(clien
         assert len(rows)==3
         assert rows[2][1]==first["submission_id"] or str(rows[2][1])==first["submission_id"]
 
+def test_stage_batch_sync_is_idempotent_and_one_rejected_record_does_not_block(client):
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+        headers=headers("district"),json={"collector_id":ACTORS["collector"]}).status_code==200
+    valid=new_submission(scheme)
+    invalid={**new_submission(scheme),"form_id":"unapproved_form"}
+    another={**new_submission(scheme),"period_code":"2026-10"}
+    request={"operations":[valid,invalid,another]}
+    first=client.post("/api/v1/stage/sync/push",
+         headers=headers("collector"),json=request)
+    assert first.status_code==200,first.text
+    assert first.json()["processed"]==3
+    assert [r["outcome"] for r in first.json()["results"]]==[
+         "accepted","rejected","accepted"]
+    second=client.post("/api/v1/stage/sync/push",
+         headers=headers("collector"),json=request)
+    assert second.status_code==200,second.text
+    assert [r["outcome"] for r in second.json()["results"]]==[
+         "duplicate","rejected","duplicate"]
+    unauthorized=client.post("/api/v1/stage/sync/push",
+         headers=headers("province"),json=request)
+    assert unauthorized.status_code==403
+    assert client.post("/api/v1/stage/sync/push",
+         headers=headers("collector"),json={"operations":[]}).status_code==422
+
 def test_optimistic_lock_prevents_two_writers_overwriting(client):
     scheme=new_scheme(client)
     payload={"base_revision":1,"scheme_name":"Test concurrency update","operational_status":"Partially functional",
