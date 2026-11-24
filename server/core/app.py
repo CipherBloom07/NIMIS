@@ -19,9 +19,50 @@ import psycopg
 from psycopg.rows import dict_row
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
 app = FastAPI(title="NIMIS Core transactional development API", version="0.1.0")
+# Never combine a synthetic officer bypass with signed institutional identity.
+# OIDC may be enabled in the local test, but a bearer token cannot silently
+# fall back to the development role header.
+class CoreSecurityHeaders(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        # Not a public entrypoint: fail closed if a process tries to enable
+        # both modes, even when it has access to the loopback port.
+        if (os.environ.get("NIMIS_STAGE_OIDC_ENABLED") == "1"
+            and os.environ.get("NIMIS_STAGE_DEV_AUTH") == "1"):
+            return JSONResponse({"detail":"Conflicting identity modes refused"},status_code=503,
+                                headers={"Cache-Control":"no-store"})
+        if request.url.path.startswith("/api/v1/stage/"):
+            length=request.headers.get("content-length")
+            max_bytes=524288 if "/forms/evidence/" in request.url.path else 160*1024
+            if length and (not length.isdecimal() or int(length)>max_bytes):
+                return JSONResponse({"detail":"Request exceeds development size limit"},
+                    status_code=413,headers={"Cache-Control":"no-store"})
+            # Browser calls may only originate in known local development UIs.
+            # No-Origin requests (for tests, PowerShell, etc.) still require a
+            # valid actor token/header for every sensitive endpoint.
+            if request.method in ("POST","PUT","PATCH","DELETE"):
+                origin=request.headers.get("origin")
+                if origin and origin not in {
+                    "http://127.0.0.1:8110","http://localhost:8110",
+                    "http://127.0.0.1:5173","http://localhost:5173",
+                    "http://127.0.0.1:5191","http://localhost:5191",
+                    "http://127.0.0.1:8081","http://localhost:8081",
+                }:
+                    return JSONResponse({"detail":"Untrusted browser origin"},status_code=403,
+                        headers={"Cache-Control":"no-store"})
+        response=await call_next(request)
+        if request.url.path.startswith("/api/v1/stage/"):
+            response.headers["Cache-Control"]="no-store, private"
+            response.headers["X-Content-Type-Options"]="nosniff"
+            response.headers["Referrer-Policy"]="no-referrer"
+            response.headers["X-Frame-Options"]="DENY"
+        return response
+
+app.add_middleware(CoreSecurityHeaders)
 # Development-only browser integration, restricted to local NIMIS and Collector previews.
 app.add_middleware(
     CORSMiddleware,

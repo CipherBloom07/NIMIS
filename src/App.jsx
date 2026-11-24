@@ -10,6 +10,7 @@ import SchemeAssessment from './SchemeAssessment.jsx';
 import HistoricalBriefing from './HistoricalBriefing.jsx';
 import ExecutiveOverview from './ExecutiveOverview.jsx';
 import CoreWorkflowLab from './CoreWorkflowLab.jsx';
+import PublishedFieldPreview from './PublishedFieldPreview.jsx';
 import {enqueueSyncChange,synchronizeIfConfigured,readSyncQueue} from './dataSync.js';
 import {
   LayoutDashboard, Map, Droplets, Wrench, Sprout, ClipboardList, Database, Upload,
@@ -31,10 +32,10 @@ const nav = [
   { id: 'briefing', label: '2026 Ministerial Briefing', icon: FileBarChart2, group: 'MANAGEMENT' },
   { id: 'data', label: 'Data Management & Verification', icon: Upload, group: 'MANAGEMENT' },
   ...(import.meta.env.DEV ? [
-    { id: 'district-inbox', label: 'District Collector Inbox (Test)', icon: ClipboardList, group: 'MANAGEMENT' },
-    { id: 'provincial-inbox', label: 'Provincial Review (Test)', icon: ShieldCheck, group: 'MANAGEMENT' },
-    { id: 'admin-inbox', label: 'Admin Publication (Test)', icon: ShieldCheck, group: 'MANAGEMENT' },
-    { id: 'core-lab', label: 'Core Database Workflow (Test)', icon: Database, group: 'MANAGEMENT' },
+    { id: 'district-inbox', label: 'District Collector Inbox', icon: ClipboardList, group: 'MANAGEMENT' },
+    { id: 'provincial-inbox', label: 'Provincial Review', icon: ShieldCheck, group: 'MANAGEMENT' },
+    { id: 'admin-inbox', label: 'Admin Publication', icon: ShieldCheck, group: 'MANAGEMENT' },
+    { id: 'core-lab', label: 'Core Operations (Test)', icon: Database, group: 'MANAGEMENT' },
   ] : []),
   { id: 'reports', label: 'Reports & Analytics', icon: FileBarChart2, group: 'MANAGEMENT' },
 ];
@@ -254,6 +255,13 @@ function ModulePage({id}) {
     <div className="data-note"><CircleHelp size={15}/><span><strong>Prototype records</strong> — sample information is illustrative, stored locally in this browser and is not connected to a national database.</span></div>
     <div className="kpi-grid module-kpis">{m.cards.map(([title],i)=><div className="kpi-card" key={title}><div className="kpi-top"><span className={`kpi-icon ${['green','gold','blue'][i]}`}><Activity size={18}/></span></div><div className="kpi-label">{title}</div><div className="kpi-value">{moduleStats[i].toLocaleString()}</div><div className="kpi-note">Calculated from local workspace records</div></div>)}</div>
     {id==='gis'&&<section className="panel gis-map-panel"><div className="panel-head"><div><h2>National scheme map</h2><p>Pan, zoom and select a point to inspect the illustrative scheme record.</p></div><span className="map-layer-label">OpenStreetMap · Street layer</span></div><ZimbabweMap/></section>}
+    {import.meta.env.DEV&&['water','infrastructure','agronomy','projects'].includes(id)&&
+      <PublishedFieldPreview moduleFilter={{
+        water:['water_resources'],
+        infrastructure:['infrastructure','operations_maintenance'],
+        agronomy:['agronomy'],
+        projects:['projects']
+      }[id]}/>}
     <ModuleInsights id={id} records={records}/>
     <section className="panel schemes-panel">
       <div className="panel-head"><div><h2>{recordTitle}</h2><p>{filtered.length} records displayed · linked to scheme references</p></div><div className="panel-actions"><button className="ghost-btn" onClick={exportCsv}><Download size={14}/> Export CSV</button><button className="reg-primary" onClick={openNew}>+ Add record</button></div></div>
@@ -296,13 +304,14 @@ function ReportsPage(){
     }catch(error){if(url)URL.revokeObjectURL(url);window.alert('The report catalogue could not be exported. Please try again.')}
   };
   return <div className="module-page">
-    <div className="welcome-row"><div><div className="eyebrow">MANAGEMENT / REPORTING</div><h1>Reports & Analytics</h1><p className="subtitle">A catalogue of reporting views planned for governed NIMIS information.</p></div><button className="ghost-btn" onClick={exportCatalogue}><Download size={14}/> Export catalogue</button></div>
-    <div className="data-note"><CircleHelp size={15}/><span><strong>Prototype report catalogue</strong> — these are report definitions only. No live national data, report-generation service or Power BI connection is configured.</span></div>
+    <div className="welcome-row"><div><div className="eyebrow">MANAGEMENT / REPORTING</div><h1>Reports & Analytics</h1><p className="subtitle">Review published field surveys received from the NIMIS Collector and inspect the planned reporting catalogue.</p></div><button className="ghost-btn" onClick={exportCatalogue}><Download size={14}/> Export catalogue</button></div>
+    <div className="data-note"><CircleHelp size={15}/><span><strong>Local connected reporting</strong> — published test field records are available below through the NIMIS Core API. Catalogue definitions are still provisional; official Power BI data is not configured.</span></div>
     <div className="kpi-grid module-kpis">
       <div className="kpi-card"><div className="kpi-label">Report definitions</div><div className="kpi-value">{reportTemplates.length}</div><div className="kpi-note">Prototype catalogue</div></div>
       <div className="kpi-card"><div className="kpi-label">Reporting cycles</div><div className="kpi-value">Monthly / quarterly</div><div className="kpi-note">Suggested frequencies</div></div>
-      <div className="kpi-card"><div className="kpi-label">Data publication</div><div className="kpi-value">Not connected</div><div className="kpi-note">Requires verified source records</div></div>
+      <div className="kpi-card"><div className="kpi-label">Data publication</div><div className="kpi-value">Core stage</div><div className="kpi-note">Published fictional field records below</div></div>
     </div>
+    {import.meta.env.DEV&&<PublishedFieldPreview/>}
     <section className="panel schemes-panel">
       <div className="panel-head"><div><h2>Available report definitions</h2><p>Select a definition to inspect its purpose and expected fields.</p></div></div>
       <div className="table-wrap"><table><thead><tr><th>Report</th><th>Category</th><th>Frequency</th><th>Definition</th></tr></thead><tbody>
@@ -318,6 +327,7 @@ function ReportsPage(){
 export default function App() {
   const [active,setActive]=useState('dashboard'); const [sidebarOpen,setSidebarOpen]=useState(false); const [search,setSearch]=useState('');
   const [isOnline,setIsOnline]=useState(()=>typeof navigator==='undefined'?true:navigator.onLine);
+  const [coreConnected,setCoreConnected]=useState(false);
   const [pendingSync,setPendingSync]=useState(()=>readSyncQueue().filter(item=>item.status!=='synced').length);
   useEffect(()=>{
     let retrying=false;
@@ -328,8 +338,27 @@ export default function App() {
     document.addEventListener('visibilitychange',onVisible);retry();
     return()=>{window.removeEventListener('online',retry);window.removeEventListener('offline',refresh);window.removeEventListener('nimis-sync-queue-updated',retry);window.removeEventListener('storage',refresh);document.removeEventListener('visibilitychange',onVisible)};
   },[]);
+  useEffect(()=>{
+    if(!import.meta.env.DEV)return;
+    let mounted=true;
+    const check=async()=>{
+      try{
+        const result=await fetch('http://127.0.0.1:8775/api/v1/stage/health',{
+          cache:'no-store',signal:AbortSignal.timeout(3500)});
+        const payload=await result.json();
+        if(mounted)setCoreConnected(result.ok&&payload.mode==='isolated-development'&&payload.production_ready===false);
+      }catch{if(mounted)setCoreConnected(false)}
+    };
+    void check();
+    const handle=window.setInterval(()=>{if(document.visibilityState==='visible')void check()},12000);
+    return()=>{mounted=false;window.clearInterval(handle)};
+  },[]);
   const activeItem=nav.find(n=>n.id===active); const grouped=useMemo(()=>['OVERVIEW','MONITORING','MANAGEMENT'].map(group=>({group,items:nav.filter(n=>n.group===group)})),[]);
   const change=(id)=>{setActive(id);setSidebarOpen(false);};
   return <div className="app-shell" data-nimis-ui-version="2026-reference-v2"><aside className={`sidebar ${sidebarOpen?'open':''}`}><div className="brand"><div className="brand-mark"><OfficialLogo /></div><div className="brand-text"><strong>NIMIS</strong><span>National Irrigation Management Information System</span></div><button className="close-sidebar" onClick={()=>setSidebarOpen(false)}><X size={18}/></button></div><div className="sidebar-divider"/><div className="nav-scroll">{grouped.map(g=><div className="nav-group" key={g.group}><div className="nav-heading">{g.group}</div>{g.items.map(n=>{const Icon=n.icon;return <button className={`nav-item ${active===n.id?'active':''}`} key={n.id} onClick={()=>change(n.id)}><Icon size={17}/><span>{n.label}</span>{active===n.id&&<span className="nav-active-dot"/>}</button>})}</div>)}</div><div className="sidebar-bottom"><div className="user-card"><div className="user-avatar">NI</div><div className="user-info"><strong>NIMIS Preview</strong><span>Prototype workspace</span></div><ChevronDown size={15}/></div><div className="sidebar-footer">Department of Irrigation Development<br/>Government of Zimbabwe</div></div></aside>{sidebarOpen&&<div className="mobile-overlay" onClick={()=>setSidebarOpen(false)}/>}
-  <main className="main-area"><header className="topbar"><div className="ministry-brand"><strong>Ministry of Agriculture, Mechanisation and Water Resources Development</strong><span>Department of Irrigation Development</span></div><button className="mobile-menu icon-btn" onClick={()=>setSidebarOpen(true)}><Menu size={19}/></button><div className="breadcrumb"><span>NIMIS</span><b>/</b><strong>{activeItem?.label}</strong></div><div className="top-actions"><span className={`connection-status ${isOnline?'online':'offline'}`} title={isOnline?'Network connection detected':'Offline mode — changes are saved on this device'}><i/>{isOnline?'Online':'Offline'}{pendingSync>0&&<b>{pendingSync} pending</b>}</span><div className="searchbox"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search schemes, districts..." aria-label="Search"/>{search&&<button onClick={()=>setSearch('')}><X size={13}/></button>}</div><button className="icon-btn notification-btn" aria-label="Notifications"><Bell size={17}/><i/></button><div className="top-user"><div className="user-avatar small">NI</div><span>Preview</span><ChevronDown size={14}/></div></div></header><div className="content-wrap"><div className="content-inner">{active==='dashboard'?<ExecutiveOverview onSelect={change}/>:active==='registry'?<RegistryPage/>:active==='assessment'?<SchemeAssessment/>:active==='briefing'?<HistoricalBriefing/>:active==='reports'?<ReportsPage/>:active==='data'?<DataManagement/>:active==='district-inbox'?<DistrictInbox/>:active==='provincial-inbox'?<ReviewStageInbox stage="provincial"/>:active==='admin-inbox'?<ReviewStageInbox stage="admin"/>:active==='core-lab'?<CoreWorkflowLab/>:<ModulePage id={active}/>}<footer className="page-footer"><span>© 2026 NIMIS · National Irrigation Management Information System</span><span><span className="footer-status"/> Prototype environment</span></footer></div></div></main></div>;
+  <main className="main-area"><header className="topbar"><div className="ministry-brand"><strong>Ministry of Agriculture, Mechanisation and Water Resources Development</strong><span>Department of Irrigation Development</span></div><button className="mobile-menu icon-btn" onClick={()=>setSidebarOpen(true)}><Menu size={19}/></button><div className="breadcrumb"><span>NIMIS</span><b>/</b><strong>{activeItem?.label}</strong></div><div className="top-actions"><span className={`connection-status ${import.meta.env.DEV?(coreConnected?'online':'offline'):(isOnline?'online':'offline')}`}
+    title={import.meta.env.DEV?(coreConnected?'NIMIS Core development backend is reachable':'Local NIMIS Core is not connected'):(isOnline?'Network connected':'Offline mode')}>
+    <i/>{import.meta.env.DEV?(coreConnected?'Core connected':'Core offline'):(isOnline?'Online':'Offline')}
+    {pendingSync>0&&<b>{pendingSync} pending</b>}
+  </span><div className="searchbox"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search schemes, districts..." aria-label="Search"/>{search&&<button onClick={()=>setSearch('')}><X size={13}/></button>}</div><button className="icon-btn notification-btn" aria-label="Notifications"><Bell size={17}/><i/></button><div className="top-user"><div className="user-avatar small">NI</div><span>Preview</span><ChevronDown size={14}/></div></div></header><div className="content-wrap"><div className="content-inner">{active==='dashboard'?<ExecutiveOverview onSelect={change}/>:active==='registry'?<RegistryPage/>:active==='assessment'?<SchemeAssessment/>:active==='briefing'?<HistoricalBriefing/>:active==='reports'?<ReportsPage/>:active==='data'?<DataManagement/>:active==='district-inbox'?<DistrictInbox/>:active==='provincial-inbox'?<ReviewStageInbox stage="provincial"/>:active==='admin-inbox'?<ReviewStageInbox stage="admin"/>:active==='core-lab'?<CoreWorkflowLab/>:<ModulePage id={active}/>}<footer className="page-footer"><span>© 2026 NIMIS · National Irrigation Management Information System</span><span><span className="footer-status"/> Prototype environment</span></footer></div></div></main></div>;
 }

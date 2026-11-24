@@ -1,4 +1,5 @@
 import React,{useEffect,useMemo,useState} from 'react';
+import PublishedFieldPreview from './PublishedFieldPreview.jsx';
 import {Activity,ArrowUpRight,BarChart3,CalendarDays,ClipboardCheck,Database,Droplets,MapPin,RefreshCw,ShieldCheck,TrendingUp,Users,Wrench} from 'lucide-react';
 
 const STORE='nimis-registry-v1';
@@ -92,6 +93,7 @@ export default function ExecutiveOverview({onSelect}){
    <span><strong>{preview?'FICTIONAL LAYOUT PREVIEW':'Data status'}:</strong> {preview?'The example schemes shown here exist only in this screen for visual review. They are NOT saved, real, verified, submitted or connected to the Ministry database.':'Figures are calculated from this browser\'s prototype registry, not a verified national database. Never interpret sample scheme entries as official Ministry statistics.'}</span>
    <button onClick={()=>onSelect('briefing')}>2026 source briefing <ArrowUpRight size={14}/></button>
   </div>
+  {import.meta.env.DEV&&<PublishedFieldPreview/>}
   <div className="overview-kpis">
    <Metric icon={Database} name="Registered irrigation schemes" value={num(filtered.length)} note="In this browser register"/>
    <Metric icon={Droplets} name="Currently irrigated area" value={num(summary.irrigated,1)+' ha'} note="Entered scheme values" tone="blue"/>

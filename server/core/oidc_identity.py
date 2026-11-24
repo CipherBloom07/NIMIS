@@ -21,7 +21,9 @@ def _options():
     issuer_parts=urlparse(issuer)
     if (parts.scheme!="https" or not parts.hostname or parts.username or parts.password
             or parts.fragment or issuer_parts.scheme!="https" or
-            not issuer_parts.hostname or issuer_parts.username or issuer_parts.password):
+            not issuer_parts.hostname or issuer_parts.username or issuer_parts.password
+            or parts.hostname.lower()!=issuer_parts.hostname.lower()
+            or parts.port!=issuer_parts.port):
         raise HTTPException(503,detail="Identity endpoints must use valid HTTPS URLs")
     return issuer,audience,jwks
 
