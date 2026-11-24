@@ -1,5 +1,6 @@
 import React, {useEffect,useMemo,useState} from 'react';
 import { ClipboardCheck, Download, Save, Search, ShieldCheck } from 'lucide-react';
+import { functionalityRate } from './kpi-rules.mjs';
 
 /*
   Source: NIMIS Concept and GUI Illustrations, section 12 (24 mandatory fields);
@@ -122,6 +123,7 @@ export default function SchemeAssessment(){
     Object.values(x).some(value=>String(value??'').toLowerCase().includes(search.toLowerCase())));
   const complete=useMemo(()=>fields.filter(([, , ,required])=>required).filter(([key])=>String(draft[key]??'').trim()!=='').length,[draft]);
   const mandatory=fields.filter(f=>f[3]).length;
+  const draftFunctionalRate=useMemo(()=>functionalityRate(draft.equippedArea,draft.functionalArea),[draft.equippedArea,draft.functionalArea]);
   const issues=useMemo(()=>assessDraft(draft),[draft]);
   function pick(id){
     if(!id){setScheme('');setDraft(makeDraft({}));return;}
@@ -178,6 +180,7 @@ export default function SchemeAssessment(){
                   placeholder={label} />}</label>)}
           </div>
         </div>
+        <div className="assessment-calculated"><strong>Draft functionality rate:</strong> {draftFunctionalRate===null?'Not calculable — enter valid equipped and functional hectares':draftFunctionalRate.toLocaleString('en-ZW')+'%'} <small>Formula: 100 × functional area ÷ equipped area. This is a local draft calculation, not a verified KPI.</small></div>
         <div className="assessment-actions">
           <button className="ghost-btn" disabled={sectionIndex===0} onClick={()=>setSectionIndex(x=>x-1)}>Previous section</button>
           <button className="reg-primary" onClick={save}><Save size={15}/> Save local draft</button>
