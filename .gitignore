@@ -3,3 +3,6 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Isolated development database application credentials; never commit.
+/database/local/
