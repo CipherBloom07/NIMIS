@@ -1,4 +1,4 @@
-import React,{useState} from 'react';
+import React,{useState,useEffect,useCallback} from 'react';
 import {Database,RefreshCw,ShieldCheck,AlertTriangle} from 'lucide-react';
 
 /**
@@ -28,7 +28,7 @@ export default function PublishedFieldPreview({moduleFilter=null}){
   const [status,setStatus]=useState('Connect to your isolated local Core when it is running. No official figures are displayed.');
   const [loaded,setLoaded]=useState(false);
   const [busy,setBusy]=useState(false);
-  async function load(offset=0){
+  const load=useCallback(async function load(offset=0){
     if(!import.meta.env.DEV)return;
     setBusy(true);
     try{
@@ -54,10 +54,21 @@ export default function PublishedFieldPreview({moduleFilter=null}){
       if(offset===0){setLoaded(false);setRows([]);setNextOffset(null)}
       setStatus('Test report unavailable: '+String(error)+'. Start the isolated Core, check role and assignments.');
     }finally{setBusy(false)}
-  }
+  },[month,role]);
+  useEffect(()=>{
+    if(!import.meta.env.DEV)return;
+    void load(0);
+    // Only public, scoped PUBLISHED observations are re-read; never upload
+    // local browser prototypes or update the scheme master.
+    const timer=window.setInterval(()=>{
+      if(document.visibilityState==='visible')void load(0);
+    },20000);
+    return()=>window.clearInterval(timer);
+  },[load]);
   if(!import.meta.env.DEV)return null;
   const visibleRows=moduleFilter?rows.filter(row=>moduleFilter.includes(row.module)):rows;
   const modules=[...new Set(visibleRows.map(row=>row.module))];
+  const schemeCount=new Set(visibleRows.map(row=>row.scheme_id)).size;
   return <section className="panel" style={{padding:18,marginBottom:20}}>
     <div className="panel-head"><div>
       <h2><Database size={18} style={{verticalAlign:'middle',marginRight:8}}/>Connected field reporting — Development Test</h2>
@@ -82,7 +93,13 @@ export default function PublishedFieldPreview({moduleFilter=null}){
     </div>
     <p role="status" style={{padding:'10px 0'}}>{status}</p>
     {loaded&&<>
-      <p><strong>{visibleRows.length} matching published records</strong> · {modules.map(key=>MODULE_LABELS[key]||key).join(', ')||'No approved published modules for this month'}</p>
+      <div className="kpi-grid module-kpis" style={{marginBottom:12}}>
+        <div className="kpi-card"><div className="kpi-label">Published observations shown</div><strong className="kpi-value">{visibleRows.length}</strong></div>
+        <div className="kpi-card"><div className="kpi-label">Schemes represented</div><strong className="kpi-value">{schemeCount}</strong></div>
+        <div className="kpi-card"><div className="kpi-label">Published modules</div><strong className="kpi-value">{modules.length}</strong></div>
+      </div>
+      <p><strong>{visibleRows.length} published records in this selected view</strong> · {modules.map(key=>MODULE_LABELS[key]||key).join(', ')||'No published observations for this month'}</p>
+      <p className="reg-foot">Counts reflect loaded scoped observations, not national statistical totals. Auto-refresh every 20 seconds; use Load more for additional pages.</p>
       <div className="table-wrap"><table>
         <thead><tr><th>Module</th><th>Scheme</th><th>District</th><th>Form / month</th><th>Published measurements</th></tr></thead>
         <tbody>{visibleRows.map(row=><tr key={row.event_id}>
