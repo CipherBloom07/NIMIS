@@ -150,7 +150,7 @@ def _csv_safe(value):
 
 @router.get("/reports/published.csv")
 def published_form_csv(
-    period_code:str=Query(...,pattern=r"^\\d{4}-(0[1-9]|1[0-2])$"),
+    period_code:str=Query(...,pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
     form_id:str|None=Query(default=None,min_length=3,max_length=90),
     user=Depends(actor),
 ):
