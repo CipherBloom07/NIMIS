@@ -207,7 +207,11 @@ def field_forms_inbox(user=Depends(actor)):
     elif role=="provincial_officer":
         clause, params="(s.province_code=%s OR (s.scheme_id IS NULL AND f.payload->>'province'=%s))",(user["province_code"],user["province_code"])
     elif role=="district_officer":
-        clause, params="(s.district_code=%s OR (s.scheme_id IS NULL AND f.payload->>'district'=%s))",(user["district_code"],user["district_code"])
+        clause, params="""((s.province_code=%s AND s.district_code=%s) OR
+           (s.scheme_id IS NULL AND f.payload->>'province'=%s
+            AND f.payload->>'district'=%s))""",(
+             user["province_code"],user["district_code"],
+             user["province_code"],user["district_code"])
     else:
         clause, params="f.collector_id=%s",(user["actor_id"],)
     with db() as conn:
@@ -225,3 +229,43 @@ def field_forms_inbox(user=Depends(actor)):
                          v.isoformat() if isinstance(v,datetime) else v)
                       for k,v in row.items()} for row in rows],
             "note":"Review-only records, not eligible for publication or dashboard totals."}
+
+
+@router.get("/submissions/{event_id}")
+def field_form_detail(event_id: UUID, user=Depends(actor)):
+    """Development-only scoped draft answers; never an official publication API."""
+    need_role(user,"admin","provincial_officer","district_officer","data_collector")
+    with db() as conn:
+        row=conn.execute(
+            """SELECT f.event_id,f.record_id,f.revision,f.form_id,f.form_version,
+                      f.scheme_id,f.collector_id,f.period_code,f.observed_at,
+                      f.source,f.status,f.payload,f.evidence_pending,
+                      s.province_code,s.district_code
+               FROM nimis_stage.field_form_submission f
+               LEFT JOIN nimis_stage.scheme s USING(scheme_id)
+               WHERE f.event_id=%s""",(event_id,)
+        ).fetchone()
+    if row is None:raise HTTPException(404,detail="Form submission not found")
+    if row["scheme_id"] is None:
+        province=row["payload"].get("province")
+        district=row["payload"].get("district")
+    else:
+        province=row["province_code"]
+        district=row["district_code"]
+    role=user["role_code"]
+    permitted=(
+        role=="admin" or
+        (role=="data_collector" and row["collector_id"]==user["actor_id"]) or
+        (role=="provincial_officer" and user["province_code"]==province) or
+        (role=="district_officer" and user["province_code"]==province
+         and user["district_code"]==district)
+    )
+    if not permitted:raise HTTPException(404,detail="Form submission not found")
+    return {"event_id":str(row["event_id"]),"record_id":str(row["record_id"]),
+            "scheme_id":str(row["scheme_id"]) if row["scheme_id"] else None,
+            "form_id":row["form_id"],"form_version":row["form_version"],
+            "revision":row["revision"],"period_code":row["period_code"],
+            "observed_at":row["observed_at"].isoformat(),"source":row["source"],
+            "status":row["status"],"evidence_pending":row["evidence_pending"],
+            "answers":row["payload"],"official":False,
+            "note":"Proposed form fields are not approved or published."}
