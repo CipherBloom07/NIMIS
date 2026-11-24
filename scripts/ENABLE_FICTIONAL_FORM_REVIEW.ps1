@@ -1,6 +1,6 @@
 <#
 ONLY for standalone fictional nimis_core_dev. Explicit opt-in test.
-Adds 4 fake form review/mapping grants and Demo Admin delegation;
+Adds 10 fictional registered-scheme form review/mapping grants and Demo Admin delegation;
 does not approve any Ministry form or touch real data.
 #>
 [CmdletBinding()]
@@ -32,7 +32,7 @@ try{
  }
  & $Psql -X -w -h 127.0.0.1 -p 55432 -U postgres -d nimis_core_dev -v ON_ERROR_STOP=1 -1 -f $Sql
  if($LASTEXITCODE -ne 0){throw 'FICTIONAL_REVIEW_FIXTURE_FAILED'}
- Write-Host 'FICTIONAL_FORM_REVIEW: PASS — 4 DEMO forms enabled ONLY in nimis_core_dev' -ForegroundColor Green
+ Write-Host 'FICTIONAL_FORM_REVIEW: PASS — 10 DEMO registered-scheme forms enabled ONLY in nimis_core_dev' -ForegroundColor Green
  Write-Host 'NOT institutional signoff. No production data modified.' -ForegroundColor Yellow
 }finally{
  if($null -eq $Original){Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue}
