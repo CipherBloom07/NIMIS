@@ -342,6 +342,31 @@ def push_batch(batch: SyncPushBatch, user=Depends(actor)):
             "results":results,"processed":len(results),
             "note":"Do not clear local drafts or attachments; only individually acknowledged operations may be marked synced."}
 
+@app.get("/api/v1/stage/sync/status/{submission_id}")
+def submission_status(submission_id:UUID,user=Depends(actor)):
+    """Status pull for the original submitter, with decision history, no other user's data."""
+    need_role(user,"data_collector","district_officer")
+    with db() as conn:
+        row=conn.execute("""SELECT sub.submission_id,sub.collector_id,sub.status,
+                 sub.record_revision,sub.period_code,sub.form_id,
+                 s.province_code,s.district_code
+                 FROM nimis_stage.submission sub
+                 JOIN nimis_stage.scheme s USING(scheme_id)
+                 WHERE sub.submission_id=%s""",(submission_id,)).fetchone()
+        if not row:raise HTTPException(404,detail="Submission not found")
+        if row["collector_id"] != user["actor_id"] or not in_scope(
+            user,row["province_code"],row["district_code"]):
+            # Avoid allowing collector users to enumerate others' submissions.
+            raise HTTPException(404,detail="Submission not found")
+        decisions=conn.execute("""SELECT action,from_status,to_status,reason,created_at
+            FROM nimis_stage.decision WHERE submission_id=%s
+            ORDER BY created_at,decision_id""",(submission_id,)).fetchall()
+    return {"source":"ISOLATED_DEVELOPMENT","official":False,
+            "submission_id":str(submission_id),"status":row["status"],
+            "record_revision":row["record_revision"],
+            "period_code":row["period_code"],"form_id":row["form_id"],
+            "decisions":as_json(decisions)}
+
 @app.get("/api/v1/stage/inbox")
 def inbox(user=Depends(actor)):
     need_role(user,"admin","district_officer","provincial_officer")
