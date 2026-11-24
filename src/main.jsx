@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
+import NimisErrorBoundary from './NimisErrorBoundary.jsx';
 import './design-tokens.css';
 import './styles.css';
 import './requirements-theme.css';
@@ -10,7 +11,7 @@ if ('storage' in navigator && navigator.storage?.persist) {
   navigator.storage.persist().catch(() => false);
 }
 
-createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);
+createRoot(document.getElementById('root')).render(<React.StrictMode><NimisErrorBoundary><App /></NimisErrorBoundary></React.StrictMode>);
 
 if ('serviceWorker' in navigator) {
   if (import.meta.env.DEV) {
