@@ -561,3 +561,85 @@ def test_collector_web_photo_upload_preflight_is_explicitly_allowlisted(client):
       headers={"Origin":"https://untrusted.invalid",
                "Access-Control-Request-Method":"PUT"})
     assert untrusted.headers.get("access-control-allow-origin") is None
+
+
+def test_published_form_reporting_requires_approved_mapping_and_officer_chain(client,env):
+    from uuid import uuid4
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+        headers=headers("district"),json={"collector_id":ACTORS["collector"]}).status_code==200
+    now=datetime.now(timezone.utc).isoformat()
+    event=str(uuid4())
+    payload={
+      "event_id":event,"record_id":str(uuid4()),"revision":1,"device_id":str(uuid4()),
+      "scheme_id":scheme,"form_id":"water_availability","form_version":1,
+      "period_code":"2026-11","captured_at":now,"observed_at":now,
+      "source":"Fictional meter test","base_scheme_revision":1,
+      "answers":{"water_level":"3.20","rainfall":"17.5","storage_percent":"65"},
+    }
+    pushed=client.post("/api/v1/stage/forms/sync/push",
+        headers=headers("collector"),json={"operations":[payload]})
+    assert pushed.status_code==200,pushed.text
+    assert pushed.json()["results"][0]["outcome"]=="accepted"
+    report_url="/api/v1/stage/forms/reports/published?period_code=2026-11"
+    def report(who):
+        return client.get(report_url,headers=headers(who))
+    before=report("district")
+    assert before.status_code==200,before.text
+    assert not any(x["event_id"]==event for x in before.json()["items"])
+    assert report("collector").status_code==403
+    assert not any(x["event_id"]==event for x in report("other_district").json()["items"])
+
+    with psycopg.connect(env) as conn:
+        conn.execute(
+          """INSERT INTO nimis_stage.approved_field_form
+              (form_id,form_version,approved_by,reporting_mapping_approved)
+              VALUES ('water_availability',1,%s,false)
+              ON CONFLICT (form_id,form_version)
+              DO UPDATE SET reporting_mapping_approved=false""",(ACTORS["admin"],))
+        conn.execute(
+          """INSERT INTO nimis_stage.actor_permission
+              (actor_id,permission_code,granted_by)
+              VALUES (%s,'NATIONAL_TECHNICAL_APPROVE',%s)
+              ON CONFLICT(actor_id,permission_code)
+              DO UPDATE SET revoked_at=NULL""",(ACTORS["admin"],ACTORS["admin"]))
+    endpoint=f"/api/v1/stage/forms/submissions/{event}/decisions"
+    def decide(who,action):
+        return client.post(endpoint,headers=headers(who),
+              json={"decision_id":str(uuid4()),"action":action,"reason":""})
+    assert decide("district","VERIFY").status_code==200
+    assert decide("province","REVIEW").status_code==200
+    assert decide("admin","TECHNICAL_APPROVE").status_code==200
+    assert decide("admin","PUBLISH").status_code==409
+    assert not any(x["event_id"]==event for x in report("admin").json()["items"])
+    with psycopg.connect(env) as conn:
+        conn.execute(
+          """UPDATE nimis_stage.approved_field_form
+             SET reporting_mapping_approved=true
+             WHERE form_id='water_availability' AND form_version=1""")
+    assert decide("admin","PUBLISH").status_code==200
+    published=report("district")
+    assert published.status_code==200,published.text
+    row=next(x for x in published.json()["items"] if x["event_id"]==event)
+    assert row["module"]=="water_resources"
+    assert row["scheme_id"]==scheme
+    assert row["status"]=="PUBLISHED"
+    assert row["metrics"]==[
+      {"field":"water_level","value":"3.20","unit":"m"},
+      {"field":"storage_percent","value":"65","unit":"percent"},
+      {"field":"rainfall","value":"17.5","unit":"mm"},
+    ]
+    assert published.json()["official"] is False
+    assert published.json()["aggregation_policy"].startswith("NO_NATIONAL_TOTALS")
+    assert not any(x["event_id"]==event for x in report("other_district").json()["items"])
+    assert client.get(report_url+"&form_id=not_approved",
+        headers=headers("admin")).status_code==422
+
+
+def test_published_reporting_rejects_mixed_currencies_and_nonadditive_fields():
+    from server.core.published_field_reports import _metrics, MODULES
+    assert _metrics("om_finance",{"expenditure":"20","farmer_contributions":"10"})==[]
+    assert _metrics("water_availability",{"water_level":"Infinity","storage_percent":"125"})==[]
+    assert _metrics("water_availability",{"storage_percent":"34.2"})==[
+      {"field":"storage_percent","value":"34.2","unit":"percent"}]
+    assert "new_scheme_request" not in MODULES
