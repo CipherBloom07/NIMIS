@@ -81,51 +81,6 @@ CREATE TABLE IF NOT EXISTS nimis_stage.field_attachment (
 CREATE INDEX IF NOT EXISTS field_attachment_owner ON nimis_stage.field_attachment(uploaded_by,scheme_id);
 REVOKE ALL ON nimis_stage.field_attachment FROM PUBLIC;
 
--- Per-form authorization requires institutional form approval and separately
--- authorized national technical delegation; no approvals are seeded.
-CREATE TABLE IF NOT EXISTS nimis_stage.approved_field_form (
- form_id text NOT NULL,
- form_version integer NOT NULL CHECK(form_version>0),
- approved_by uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
- approved_at timestamptz NOT NULL DEFAULT now(),
- reporting_mapping_approved boolean NOT NULL DEFAULT false,
- PRIMARY KEY(form_id,form_version)
-);
-CREATE TABLE IF NOT EXISTS nimis_stage.actor_permission (
- actor_id uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
- permission_code text NOT NULL CHECK(permission_code IN ('NATIONAL_TECHNICAL_APPROVE')),
- granted_by uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
- granted_at timestamptz NOT NULL DEFAULT now(),
- revoked_at timestamptz,
- PRIMARY KEY(actor_id,permission_code)
-);
-REVOKE ALL ON nimis_stage.approved_field_form FROM PUBLIC;
-REVOKE ALL ON nimis_stage.actor_permission FROM PUBLIC;
-
--- Safe migration of earlier isolated staging states, without deleting rows.
-ALTER TABLE nimis_stage.field_form_submission
- DROP CONSTRAINT IF EXISTS field_form_submission_status_check;
-ALTER TABLE nimis_stage.field_form_submission
- ADD CONSTRAINT field_form_submission_status_check
- CHECK(status IN (
-  'AWAITING_FORM_APPROVAL','SCHEME_REVISION_CONFLICT','EVIDENCE_PENDING',
-  'DISTRICT_VERIFIED','PROVINCIAL_REVIEWED','TECHNICAL_APPROVED','PUBLISHED','RETURNED'
- ));
-CREATE TABLE IF NOT EXISTS nimis_stage.field_form_decision (
- decision_id uuid PRIMARY KEY,
- submission_event_id uuid NOT NULL REFERENCES nimis_stage.field_form_submission(event_id),
- actor_id uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
- action text NOT NULL CHECK(action IN ('VERIFY','RETURN','REVIEW','TECHNICAL_APPROVE','PUBLISH')),
- from_status text NOT NULL,
- to_status text NOT NULL,
- reason text,
- decided_at timestamptz NOT NULL DEFAULT now(),
- CHECK (action<>'RETURN' OR length(btrim(coalesce(reason,'')))>0)
-);
-CREATE INDEX IF NOT EXISTS field_form_decision_history
- ON nimis_stage.field_form_decision(submission_event_id,decided_at DESC);
-REVOKE ALL ON nimis_stage.field_form_decision FROM PUBLIC;
-
 -- Existing local Stage 1 clusters can be extended without deleting records.
 ALTER TABLE nimis_stage.submission
  ADD COLUMN IF NOT EXISTS prior_submission_id uuid REFERENCES nimis_stage.submission(submission_id);
@@ -197,4 +152,54 @@ CREATE INDEX IF NOT EXISTS field_form_collector
  ON nimis_stage.field_form_submission(collector_id,received_at DESC);
 REVOKE ALL ON nimis_stage.field_form_submission FROM PUBLIC;
 -- Only the reviewed local stage runtime may SELECT/INSERT. No UPDATE/DELETE.
+COMMIT;
+
+-- Form review objects are created AFTER the field_form_submission table.
+BEGIN;
+-- Per-form authorization requires institutional form approval and separately
+-- authorized national technical delegation; no approvals are seeded.
+CREATE TABLE IF NOT EXISTS nimis_stage.approved_field_form (
+ form_id text NOT NULL,
+ form_version integer NOT NULL CHECK(form_version>0),
+ approved_by uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
+ approved_at timestamptz NOT NULL DEFAULT now(),
+ reporting_mapping_approved boolean NOT NULL DEFAULT false,
+ PRIMARY KEY(form_id,form_version)
+);
+CREATE TABLE IF NOT EXISTS nimis_stage.actor_permission (
+ actor_id uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
+ permission_code text NOT NULL CHECK(permission_code IN ('NATIONAL_TECHNICAL_APPROVE')),
+ granted_by uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
+ granted_at timestamptz NOT NULL DEFAULT now(),
+ revoked_at timestamptz,
+ PRIMARY KEY(actor_id,permission_code)
+);
+REVOKE ALL ON nimis_stage.approved_field_form FROM PUBLIC;
+REVOKE ALL ON nimis_stage.actor_permission FROM PUBLIC;
+
+-- Safe migration of earlier isolated staging states, without deleting rows.
+ALTER TABLE nimis_stage.field_form_submission
+ DROP CONSTRAINT IF EXISTS field_form_submission_status_check;
+ALTER TABLE nimis_stage.field_form_submission
+ ADD CONSTRAINT field_form_submission_status_check
+ CHECK(status IN (
+  'AWAITING_FORM_APPROVAL','SCHEME_REVISION_CONFLICT','EVIDENCE_PENDING',
+  'DISTRICT_VERIFIED','PROVINCIAL_REVIEWED','TECHNICAL_APPROVED','PUBLISHED','RETURNED'
+ ));
+CREATE TABLE IF NOT EXISTS nimis_stage.field_form_decision (
+ decision_id uuid PRIMARY KEY,
+ submission_event_id uuid NOT NULL REFERENCES nimis_stage.field_form_submission(event_id),
+ actor_id uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
+ action text NOT NULL CHECK(action IN ('VERIFY','RETURN','REVIEW','TECHNICAL_APPROVE','PUBLISH')),
+ from_status text NOT NULL,
+ to_status text NOT NULL,
+ reason text,
+ decided_at timestamptz NOT NULL DEFAULT now(),
+ CHECK (action<>'RETURN' OR length(btrim(coalesce(reason,'')))>0)
+);
+CREATE INDEX IF NOT EXISTS field_form_decision_history
+ ON nimis_stage.field_form_decision(submission_event_id,decided_at DESC);
+REVOKE ALL ON nimis_stage.field_form_decision FROM PUBLIC;
+
+
 COMMIT;
