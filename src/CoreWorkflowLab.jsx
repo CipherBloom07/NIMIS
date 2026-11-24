@@ -72,9 +72,13 @@ export default function CoreWorkflowLab(){
     const scheme=server.items.find(row=>row.scheme_id===schemeId);
     if(!scheme)throw new Error('Assign this fictional scheme to the collector first.');
     const time=now();
+    const period=time.slice(0,7);
+    const existing=await call('/inbox','GET',undefined,'admin');
+    const latest=(existing.items||[]).find(row=>row.scheme_id===schemeId&&row.form_id==='operational_status'&&row.period_code===period);
     return call('/submissions','POST',{
       event_id:uid(),submission_id:uid(),scheme_id:schemeId,device_id:uid(),
-      form_id:'operational_status',form_version:1,period_code:time.slice(0,7),
+      form_id:'operational_status',form_version:1,period_code:period,
+      prior_submission_id:latest?.submission_id||null,
       base_scheme_revision:scheme.revision,captured_at:time,
       measurements:[
         {name:'equipped_area_ha',value:'20.00',unit:'ha',observed_at:time,source:'Fictional test reading'},
