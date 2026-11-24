@@ -255,6 +255,13 @@ function ModulePage({id}) {
     <div className="data-note"><CircleHelp size={15}/><span><strong>Prototype records</strong> — sample information is illustrative, stored locally in this browser and is not connected to a national database.</span></div>
     <div className="kpi-grid module-kpis">{m.cards.map(([title],i)=><div className="kpi-card" key={title}><div className="kpi-top"><span className={`kpi-icon ${['green','gold','blue'][i]}`}><Activity size={18}/></span></div><div className="kpi-label">{title}</div><div className="kpi-value">{moduleStats[i].toLocaleString()}</div><div className="kpi-note">Calculated from local workspace records</div></div>)}</div>
     {id==='gis'&&<section className="panel gis-map-panel"><div className="panel-head"><div><h2>National scheme map</h2><p>Pan, zoom and select a point to inspect the illustrative scheme record.</p></div><span className="map-layer-label">OpenStreetMap · Street layer</span></div><ZimbabweMap/></section>}
+    {import.meta.env.DEV&&['water','infrastructure','agronomy','projects'].includes(id)&&
+      <PublishedFieldPreview moduleFilter={{
+        water:['water_resources'],
+        infrastructure:['infrastructure','operations_maintenance'],
+        agronomy:['agronomy'],
+        projects:['projects']
+      }[id]}/>}
     <ModuleInsights id={id} records={records}/>
     <section className="panel schemes-panel">
       <div className="panel-head"><div><h2>{recordTitle}</h2><p>{filtered.length} records displayed · linked to scheme references</p></div><div className="panel-actions"><button className="ghost-btn" onClick={exportCsv}><Download size={14}/> Export CSV</button><button className="reg-primary" onClick={openNew}>+ Add record</button></div></div>
