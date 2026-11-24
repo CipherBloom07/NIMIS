@@ -11,12 +11,93 @@ from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from server.core.app import actor, db, in_scope, need_role
 
 router = APIRouter(prefix="/api/v1/stage/forms", tags=["field-form-staging"])
+
+@router.put("/evidence/{photo_id}")
+async def upload_field_evidence(
+    photo_id: UUID, request: Request, scheme_id: UUID = Query(...),
+    x_content_sha256: str | None = Header(default=None), user=Depends(actor),
+):
+    """Checksum-verified private photo, <=500 KiB, scoped to assigned scheme."""
+    need_role(user,"data_collector")
+    mime=request.headers.get("content-type","").split(";")[0].strip().lower()
+    if mime not in ("image/jpeg","image/png","image/webp"):
+        raise HTTPException(415,detail="Supported field photo JPEG/PNG/WebP required")
+    length=request.headers.get("content-length")
+    if length and (not length.isdecimal() or int(length)>524288):
+        raise HTTPException(413,detail="Field photo exceeds 512 KiB")
+    data=await request.body()
+    if not data or len(data)>524288:
+        raise HTTPException(413,detail="Field photo must contain 1–524288 bytes")
+    digest=hashlib.sha256(data).hexdigest()
+    if not x_content_sha256 or x_content_sha256.lower()!=digest:
+        raise HTTPException(422,detail="Photo checksum does not match")
+    with db() as conn:
+        scheme=conn.execute(
+            "SELECT province_code,district_code FROM nimis_stage.scheme WHERE scheme_id=%s",
+            (scheme_id,),
+        ).fetchone()
+        if not scheme or not in_scope(user,scheme["province_code"],scheme["district_code"]):
+            raise HTTPException(403,detail="Scheme outside authorized collector scope")
+        assigned=conn.execute(
+            """SELECT 1 FROM nimis_stage.assignment WHERE scheme_id=%s AND
+               collector_id=%s AND revoked_at IS NULL""",
+            (scheme_id,user["actor_id"]),
+        ).fetchone()
+        if not assigned:
+            raise HTTPException(403,detail="Active collector assignment required")
+        inserted=conn.execute(
+            """INSERT INTO nimis_stage.field_attachment
+               (photo_id,uploaded_by,scheme_id,mime_type,sha256,content)
+               VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING RETURNING photo_id""",
+            (photo_id,user["actor_id"],scheme_id,mime,digest,data),
+        ).fetchone()
+        if inserted is None:
+            existing=conn.execute(
+                """SELECT uploaded_by,scheme_id,mime_type,sha256 FROM nimis_stage.field_attachment
+                   WHERE photo_id=%s""",(photo_id,),
+            ).fetchone()
+            if (not existing or existing["uploaded_by"]!=user["actor_id"] or
+                existing["scheme_id"]!=scheme_id or existing["sha256"]!=digest or
+                existing["mime_type"]!=mime):
+                raise HTTPException(409,detail="Photo ID already used for different evidence")
+            return {"photo_id":str(photo_id),"sha256":digest,"outcome":"duplicate"}
+        conn.execute(
+            """INSERT INTO nimis_stage.audit(actor_id,event_type,entity_type,entity_id,details)
+               VALUES (%s,'EVIDENCE_STORED','field_attachment',%s,%s::jsonb)""",
+            (user["actor_id"],photo_id,json.dumps({"scheme_id":str(scheme_id),
+                                                    "sha256":digest,"bytes":len(data)})),
+        )
+    return {"photo_id":str(photo_id),"sha256":digest,"outcome":"accepted"}
+
+
+@router.get("/evidence/{photo_id}")
+def read_field_evidence(photo_id: UUID, user=Depends(actor)):
+    """Private review-only download, with same geography rules as form detail."""
+    need_role(user,"admin","provincial_officer","district_officer","data_collector")
+    with db() as conn:
+        row=conn.execute(
+            """SELECT a.*,s.province_code,s.district_code FROM nimis_stage.field_attachment a
+               JOIN nimis_stage.scheme s ON s.scheme_id=a.scheme_id WHERE a.photo_id=%s""",
+            (photo_id,),
+        ).fetchone()
+    if not row:
+        raise HTTPException(404,detail="Photo not found")
+    if user["role_code"]=="data_collector":
+        allowed=(row["uploaded_by"]==user["actor_id"])
+    else:
+        allowed=in_scope(user,row["province_code"],row["district_code"])
+    if not allowed:raise HTTPException(404,detail="Photo not found")
+    return Response(content=bytes(row["content"]),media_type=row["mime_type"],
+                    headers={"Cache-Control":"private, no-store",
+                             "X-Content-SHA256":row["sha256"]})
+
+
 
 _CATALOGUE = json.loads(
     (Path(__file__).resolve().parent / "collector_form_catalogue.json").read_text("utf-8")
