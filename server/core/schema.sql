@@ -68,6 +68,19 @@ CREATE TABLE IF NOT EXISTS nimis_stage.submission (
  is_demo boolean NOT NULL DEFAULT true,
  CHECK (octet_length(payload::text)<=524288)
 );
+-- Private photo evidence in isolated stage DB; never public static hosting.
+CREATE TABLE IF NOT EXISTS nimis_stage.field_attachment (
+ photo_id uuid PRIMARY KEY,
+ uploaded_by uuid NOT NULL REFERENCES nimis_stage.actor(actor_id),
+ scheme_id uuid NOT NULL REFERENCES nimis_stage.scheme(scheme_id),
+ mime_type text NOT NULL CHECK (mime_type IN ('image/jpeg','image/png','image/webp')),
+ sha256 char(64) NOT NULL,
+ content bytea NOT NULL CHECK (octet_length(content) BETWEEN 1 AND 524288),
+ uploaded_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS field_attachment_owner ON nimis_stage.field_attachment(uploaded_by,scheme_id);
+REVOKE ALL ON nimis_stage.field_attachment FROM PUBLIC;
+
 -- Existing local Stage 1 clusters can be extended without deleting records.
 ALTER TABLE nimis_stage.submission
  ADD COLUMN IF NOT EXISTS prior_submission_id uuid REFERENCES nimis_stage.submission(submission_id);
