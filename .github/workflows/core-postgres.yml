@@ -2,7 +2,7 @@ name: NIMIS Core PostgreSQL concurrency and workflow
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/nimis-core-transactional-backend, feat/collector-field-form-staging-contract]
   push:
     branches: [main, feat/nimis-core-transactional-backend]
 
