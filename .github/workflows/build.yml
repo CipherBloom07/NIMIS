@@ -2,7 +2,7 @@ name: Build NIMIS
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/field-reporting-dashboard-test-v1]
   pull_request:
     branches: [main]
 
