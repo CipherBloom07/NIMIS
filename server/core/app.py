@@ -283,6 +283,13 @@ def decide(submission_id:UUID,body:Decision,user=Depends(actor)):
         if not row:raise HTTPException(404,detail="Submission not found")
         if not in_scope(user,row["province_code"],row["district_code"]):
             raise HTTPException(403,detail="Outside geographical scope")
+        # Check idempotency first: a retried decision may have already advanced status.
+        existing=conn.execute("SELECT * FROM nimis_stage.decision WHERE event_id=%s",(body.event_id,)).fetchone()
+        if existing:
+            if (existing["submission_id"]==submission_id and existing["actor_id"]==user["actor_id"]
+                and existing["action"]==body.action and existing["reason"]==(body.reason.strip() or None)):
+                return {"outcome":"duplicate","status":row["status"]}
+            raise HTTPException(409,detail="Decision event ID reused")
         if body.action=="RETURN":
             allowed={"SUBMITTED":"district_officer","DISTRICT_VERIFIED":"provincial_officer"}
             expected_role=allowed.get(row["status"])
@@ -293,13 +300,6 @@ def decide(submission_id:UUID,body:Decision,user=Depends(actor)):
             source,target,expected_role=TRANSITIONS[body.action]
             if row["status"]!=source:raise HTTPException(409,detail="Invalid or already processed transition")
         need_role(user,expected_role)
-        # An already recorded event cannot be silently re-used.
-        existing=conn.execute("SELECT * FROM nimis_stage.decision WHERE event_id=%s",(body.event_id,)).fetchone()
-        if existing:
-            if (existing["submission_id"]==submission_id and existing["actor_id"]==user["actor_id"]
-                and existing["action"]==body.action and existing["reason"]==(body.reason.strip() or None)):
-                return {"outcome":"duplicate","status":row["status"]}
-            raise HTTPException(409,detail="Decision event ID reused")
         conn.execute("""UPDATE nimis_stage.submission SET status=%s,latest_decision_at=now()
                        WHERE submission_id=%s""",(target,submission_id))
         conn.execute("""INSERT INTO nimis_stage.decision(decision_id,event_id,submission_id,actor_id,
