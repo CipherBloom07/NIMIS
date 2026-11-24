@@ -59,3 +59,11 @@ test('reference dashboard appearance is imported and the sample toggle cannot wr
   assert.match(dashboard,/FICTIONAL LAYOUT PREVIEW/);
   assert.doesNotMatch(dashboard,/localStorage\.setItem/);
 });
+
+test('all JSX modules include a React binding for classic JSX runtime',()=>{
+  const jsxNames=['App','DataManagement','DistrictInbox','ExecutiveOverview','HistoricalBriefing','NimisErrorBoundary','OfficialLogo','Registry','ReviewStageInbox','SchemeAssessment','main'];
+  for(const name of jsxNames){
+    const content=readFileSync('src/'+name+'.jsx','utf8');
+    assert.match(content,/import\s+React\b/,name+' must import React when JSX is transformed by Vite');
+  }
+});
