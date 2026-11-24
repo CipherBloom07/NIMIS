@@ -135,8 +135,7 @@ def _one(op: FormOperation, user: dict):
 
         existing = conn.execute(
             """SELECT event_id,collector_id,content_sha256 FROM nimis_stage.field_form_submission
-               WHERE event_id=%s OR (record_id=%s AND revision=%s)
-               FOR UPDATE""",
+               WHERE event_id=%s OR (record_id=%s AND revision=%s)""",
             (op.event_id, op.record_id, op.revision),
         ).fetchall()
         if existing:
@@ -150,17 +149,30 @@ def _one(op: FormOperation, user: dict):
                  if op.scheme_id and scheme["revision"] != op.base_scheme_revision else
                  "EVIDENCE_PENDING" if evidence_pending else "AWAITING_FORM_APPROVAL")
         payload = json.dumps(op.answers, ensure_ascii=False, allow_nan=False)
-        conn.execute(
+        inserted = conn.execute(
             """INSERT INTO nimis_stage.field_form_submission
                (event_id,record_id,revision,scheme_id,collector_id,device_id,
                 form_id,form_version,period_code,captured_at,observed_at,source,
                 base_scheme_revision,payload,content_sha256,status,evidence_pending)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s)""",
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s)
+               ON CONFLICT DO NOTHING RETURNING event_id""",
             (op.event_id, op.record_id, op.revision, op.scheme_id,
              user["actor_id"], op.device_id, op.form_id, op.form_version,
              op.period_code, op.captured_at, op.observed_at, op.source,
              op.base_scheme_revision, payload, digest, state, evidence_pending),
-        )
+        ).fetchone()
+        if inserted is None:
+            rows = conn.execute(
+                """SELECT event_id,collector_id,content_sha256
+                   FROM nimis_stage.field_form_submission
+                   WHERE event_id=%s OR (record_id=%s AND revision=%s)""",
+                (op.event_id, op.record_id, op.revision),
+            ).fetchall()
+            if (len(rows)==1 and rows[0]["event_id"]==op.event_id and
+                rows[0]["collector_id"]==user["actor_id"] and
+                rows[0]["content_sha256"]==digest):
+                return {**result,"outcome":"duplicate"}
+            return {**result,"outcome":"conflict","reason":"Event or record revision exists"}
         conn.execute(
             """INSERT INTO nimis_stage.audit(actor_id,event_type,entity_type,entity_id,details)
                VALUES (%s,'FIELD_FORM_RECEIVED','field_form',%s,%s::jsonb)""",
