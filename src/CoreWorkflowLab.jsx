@@ -167,7 +167,7 @@ export default function CoreWorkflowLab(){
   </span></div>
   <section className="panel" style={{padding:18,display:'grid',gap:15}}>
     <label className="reg-field"><span>Development test persona</span>
-      <select value={who} onChange={e=>{setWho(e.target.value);setInbox([])}}>
+      <select value={who} onChange={e=>{setWho(e.target.value);setInbox([]);setFieldInbox([]);setSelectedField(null);setPublishedFields(null);setSchemes([]);setReport(null)}}>
         {Object.entries(DEMO).map(([key,value])=><option key={key} value={key}>{value.label}</option>)}
       </select></label>
     <div style={{display:'flex',gap:9,flexWrap:'wrap'}}>
