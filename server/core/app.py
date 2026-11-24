@@ -491,3 +491,5 @@ def published_area_report(
 # Review-only field form API: isolated stage service, never production publication.
 from server.core.field_forms import router as field_form_router
 app.include_router(field_form_router)
+from server.core.published_field_reports import router as published_field_router
+app.include_router(published_field_router)
