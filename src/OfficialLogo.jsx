@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 /** Main NIMIS national emblem, served from the app's bundled public assets. */
 export default function OfficialLogo() {
