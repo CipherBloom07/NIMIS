@@ -8,6 +8,18 @@ const val=v=>v===''||v===undefined||v===null?null:Number.isFinite(Number(v))&&Nu
 const classFor=(s)=>/operational|functional/i.test(s)&&!/non|partial/i.test(s)?'green':/rehabilitation|partial|construction/i.test(s)?'amber':/non.functional|critical/i.test(s)?'red':'neutral';
 const palette=['#07874c','#2f88b7','#e4a63e','#7b6ab1','#dd6155','#57ab85','#729bca','#b6a6e4'];
 
+/* Display-only fictional examples. Never saved, uploaded or merged with real records. */
+const PREVIEW_SCHEMES=[
+  {id:'DEMO-001',name:'Example North Scheme',province:'Mashonaland Central',district:'Demo District',developed:1000,equipped:920,irrigated:840,status:'Fully functional'},
+  {id:'DEMO-002',name:'Example Eastern Scheme',province:'Mashonaland East',district:'Demo District',developed:700,equipped:630,irrigated:580,status:'Fully functional'},
+  {id:'DEMO-003',name:'Example Manicaland Scheme',province:'Manicaland',district:'Demo District',developed:520,equipped:480,irrigated:300,status:'Partially functional'},
+  {id:'DEMO-004',name:'Example Southern Scheme',province:'Masvingo',district:'Demo District',developed:830,equipped:740,irrigated:580,status:'Fully functional'},
+  {id:'DEMO-005',name:'Example Midlands Scheme',province:'Midlands',district:'Demo District',developed:460,equipped:400,irrigated:210,status:'Under rehabilitation'},
+  {id:'DEMO-006',name:'Example Western Scheme',province:'Mashonaland West',district:'Demo District',developed:660,equipped:590,irrigated:510,status:'Fully functional'},
+  {id:'DEMO-007',name:'Example Matabeleland Scheme',province:'Matabeleland South',district:'Demo District',developed:240,equipped:185,irrigated:90,status:'Non-functional'},
+  {id:'DEMO-008',name:'Example Northern Scheme',province:'Matabeleland North',district:'Demo District',developed:150,equipped:125,irrigated:70,status:'Partially functional'},
+];
+
 function Metric({icon:Icon,name,value,note,tone='green'}){
   return <article className={'overview-metric tone-'+tone}>
     <div className="metric-icon"><Icon size={20} strokeWidth={2.3}/></div>
@@ -36,6 +48,8 @@ function CircleStatus({data}){
 }
 export default function ExecutiveOverview({onSelect}){
  const [records,setRecords]=useState(read);
+ const [preview,setPreview]=useState(false);
+ const displayedRecords=preview?PREVIEW_SCHEMES:records;
  const [province,setProvince]=useState('All provinces');
  const [query,setQuery]=useState('');
  useEffect(()=>{
@@ -44,9 +58,9 @@ export default function ExecutiveOverview({onSelect}){
    window.addEventListener('storage',update);
    return()=>{window.removeEventListener('nimis-registry-updated',update);window.removeEventListener('storage',update)};
  },[]);
- const provinces=useMemo(()=>[...new Set(records.map(x=>x.province).filter(Boolean))].sort(),[records]);
- const filtered=useMemo(()=>records.filter(x=>(province==='All provinces'||x.province===province)&&
-  [x.name,x.id,x.district].some(t=>String(t||'').toLowerCase().includes(query.toLowerCase()))),[records,province,query]);
+ const provinces=useMemo(()=>[...new Set(displayedRecords.map(x=>x.province).filter(Boolean))].sort(),[displayedRecords]);
+ const filtered=useMemo(()=>displayedRecords.filter(x=>(province==='All provinces'||x.province===province)&&
+  [x.name,x.id,x.district].some(t=>String(t||'').toLowerCase().includes(query.toLowerCase()))),[displayedRecords,province,query]);
  const summary=useMemo(()=>{
   const total=(key)=>filtered.reduce((sum,r)=>sum+(val(r[key])??0),0);
   const statuses=new Map();
@@ -68,11 +82,14 @@ export default function ExecutiveOverview({onSelect}){
     <select aria-label="Filter dashboard by province" value={province} onChange={e=>setProvince(e.target.value)}>
      <option>All provinces</option>{provinces.map(x=><option key={x}>{x}</option>)}
     </select>
-    <span className="overview-period"><CalendarDays size={15}/> Current browser records</span>
+    <button className={'overview-preview-toggle '+(preview?'active':'')} type="button" aria-pressed={preview}
+      onClick={()=>{setPreview(x=>!x);setProvince('All provinces');setQuery('')}}>
+      {preview?'Exit fictional preview':'Preview sample layout'}</button>
+    <span className="overview-period"><CalendarDays size={15}/> {preview?'Fictional display only':'Current browser records'}</span>
    </div>
   </div>
   <div className="overview-source"><ShieldCheck size={16}/>
-   <span><strong>Data status:</strong> Figures are calculated from this browser's prototype registry, not a verified national database. Never interpret sample scheme entries as official Ministry statistics.</span>
+   <span><strong>{preview?'FICTIONAL LAYOUT PREVIEW':'Data status'}:</strong> {preview?'The example schemes shown here exist only in this screen for visual review. They are NOT saved, real, verified, submitted or connected to the Ministry database.':'Figures are calculated from this browser\'s prototype registry, not a verified national database. Never interpret sample scheme entries as official Ministry statistics.'}</span>
    <button onClick={()=>onSelect('briefing')}>2026 source briefing <ArrowUpRight size={14}/></button>
   </div>
   <div className="overview-kpis">
