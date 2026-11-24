@@ -35,11 +35,13 @@ def env():
         conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA nimis_stage TO nimis_stage_demo")
         conn.execute("""GRANT INSERT ON nimis_stage.scheme,nimis_stage.assignment,
           nimis_stage.submission,nimis_stage.decision,nimis_stage.audit,
-          nimis_stage.field_form_submission TO nimis_stage_demo""")
+          nimis_stage.field_form_submission,nimis_stage.field_attachment,nimis_stage.field_form_decision TO nimis_stage_demo""")
         conn.execute("""GRANT UPDATE(scheme_name,operational_status,equipped_ha,developed_ha,functional_ha,
              revision,updated_at) ON nimis_stage.scheme TO nimis_stage_demo""")
         conn.execute("GRANT UPDATE(revoked_at,assigned_by) ON nimis_stage.assignment TO nimis_stage_demo")
         conn.execute("GRANT UPDATE(status,latest_decision_at) ON nimis_stage.submission TO nimis_stage_demo")
+        conn.execute("GRANT SELECT ON nimis_stage.actor_permission,nimis_stage.approved_field_form TO nimis_stage_demo")
+        conn.execute("GRANT UPDATE(status) ON nimis_stage.field_form_submission TO nimis_stage_demo")
         conn.execute("GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA nimis_stage TO nimis_stage_demo")
         conn.execute("REVOKE CREATE ON SCHEMA nimis_stage FROM nimis_stage_demo")
     from urllib.parse import urlunparse
@@ -340,3 +342,222 @@ def test_new_scheme_proposal_never_creates_master_record(client,env):
     assert r.json()["results"][0]["outcome"]=="accepted"
     with psycopg.connect(env) as conn:
         assert conn.execute("SELECT count(*) FROM nimis_stage.scheme WHERE scheme_name=%s",(name,)).fetchone()[0]==0
+
+def test_signed_identity_mode_never_accepts_fake_development_header(client,env,monkeypatch):
+    from server.core import oidc_identity
+    monkeypatch.setenv("NIMIS_STAGE_OIDC_ENABLED","1")
+    try:
+        # Without credentials, even an existing synthetic UUID must not work.
+        blocked=client.get("/api/v1/stage/me",headers=headers("admin"))
+        assert blocked.status_code==401,blocked.text
+
+        # Test identity verification is explicitly mocked; this does NOT
+        # claim that institutional token/JWKS integration is configured.
+        subject="test-issuer|"+uuid4().hex
+        with psycopg.connect(env) as conn:
+            conn.execute("UPDATE nimis_stage.actor SET oidc_subject=%s WHERE actor_id=%s",
+                         (subject,ACTORS["collector"]))
+        monkeypatch.setattr(oidc_identity,"verified_subject",lambda authorization:subject)
+        good=client.get("/api/v1/stage/me",
+                        headers={"Authorization":"Bearer signed-for-test"})
+        assert good.status_code==200,good.text
+        assert good.json()["role_code"]=="data_collector"
+
+        # The verified subject's DB role is immutable from client-supplied
+        # request headers and cannot be elevated to administrator.
+        forged=client.get("/api/v1/stage/me",headers={
+             **headers("admin"),"Authorization":"Bearer signed-for-test"})
+        assert forged.status_code==200,forged.text
+        assert forged.json()["role_code"]=="data_collector"
+        no_admin=client.post("/api/v1/stage/schemes",headers={
+             **headers("admin"),"Authorization":"Bearer signed-for-test"},json={
+              "scheme_code":"DEMO-"+uuid4().hex[:8],
+              "scheme_name":"Denied privilege elevation",
+              "province_code":"DEMO-P","district_code":"DEMO-D"})
+        assert no_admin.status_code==403,no_admin.text
+
+        with psycopg.connect(env) as conn:
+            conn.execute("UPDATE nimis_stage.actor SET is_active=false WHERE actor_id=%s",
+                         (ACTORS["collector"],))
+        deactivated=client.get("/api/v1/stage/me",
+                               headers={"Authorization":"Bearer signed-for-test"})
+        assert deactivated.status_code==403,deactivated.text
+    finally:
+        with psycopg.connect(env) as conn:
+            conn.execute("UPDATE nimis_stage.actor SET oidc_subject=NULL,is_active=true WHERE actor_id=%s",
+                         (ACTORS["collector"],))
+        monkeypatch.delenv("NIMIS_STAGE_OIDC_ENABLED",raising=False)
+
+
+def test_identity_provider_config_is_fail_closed(monkeypatch):
+    from server.core.oidc_identity import verified_subject
+    from fastapi import HTTPException
+    monkeypatch.delenv("NIMIS_OIDC_ISSUER",raising=False)
+    monkeypatch.delenv("NIMIS_OIDC_JWKS_URL",raising=False)
+    monkeypatch.delenv("NIMIS_OIDC_AUDIENCE",raising=False)
+    with pytest.raises(HTTPException) as missing:
+        verified_subject(None)
+    assert missing.value.status_code==401
+    with pytest.raises(HTTPException) as config:
+        verified_subject("Bearer a.b.c")
+    assert config.value.status_code==503
+
+
+def test_private_evidence_checksum_authorization_and_form_references(client,env):
+    import hashlib
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+                       headers=headers("district"),
+                       json={"collector_id":ACTORS["collector"]}).status_code==200
+    photo_id=str(uuid4())
+    # Enough JPEG signature for the bounded transport check (not a real photograph).
+    photo=bytes.fromhex("ffd8ffdb")+bytes(128)
+    digest=hashlib.sha256(photo).hexdigest()
+    route=f"/api/v1/stage/forms/evidence/{photo_id}?scheme_id={scheme}"
+    auth={**headers("collector"),"Content-Type":"image/jpeg",
+          "X-Content-SHA256":digest}
+    missing_checksum=client.put(route,headers=headers("collector")|
+         {"Content-Type":"image/jpeg"},content=photo)
+    assert missing_checksum.status_code==422
+    other=client.put(route,headers={**headers("other_district"),
+                    "Content-Type":"image/jpeg","X-Content-SHA256":digest},content=photo)
+    assert other.status_code==403
+    uploaded=client.put(route,headers=auth,content=photo)
+    assert uploaded.status_code==200,uploaded.text
+    assert uploaded.json()["outcome"]=="accepted"
+    assert uploaded.json()["sha256"]==digest
+    identical=client.put(route,headers=auth,content=photo)
+    assert identical.status_code==200,identical.text
+    assert identical.json()["outcome"]=="duplicate"
+    changed=bytes.fromhex("ffd8ffdb")+bytes(127)+b"x"
+    clash=client.put(route,headers={**auth,
+        "X-Content-SHA256":hashlib.sha256(changed).hexdigest()},content=changed)
+    assert clash.status_code==409,clash.text
+    owner=client.get(f"/api/v1/stage/forms/evidence/{photo_id}",
+                     headers=headers("collector"))
+    assert owner.status_code==200,owner.text
+    assert owner.content==photo
+    other_read=client.get(f"/api/v1/stage/forms/evidence/{photo_id}",
+                          headers=headers("other_district"))
+    assert other_read.status_code==404
+    district=client.get(f"/api/v1/stage/forms/evidence/{photo_id}",
+                        headers=headers("district"))
+    assert district.status_code==200
+
+    now=datetime.now(timezone.utc).isoformat()
+    body={"event_id":str(uuid4()),"record_id":str(uuid4()),"revision":1,
+        "device_id":str(uuid4()),"scheme_id":scheme,"form_id":"infrastructure_incident",
+        "form_version":1,"period_code":"2026-11",
+        "captured_at":now,"observed_at":now,"source":"Fictional inspection",
+        "base_scheme_revision":1,
+        "answers":{"photo_ids":[photo_id],"incident_description":"Synthetic incident"}}
+    receipt=client.post("/api/v1/stage/forms/sync/push",
+                headers=headers("collector"),json={"operations":[body]})
+    assert receipt.status_code==200,receipt.text
+    assert receipt.json()["results"][0]["outcome"]=="accepted"
+    assert receipt.json()["results"][0]["status"]=="AWAITING_FORM_APPROVAL"
+    with psycopg.connect(env) as conn:
+        evidence_pending=conn.execute(
+            "SELECT evidence_pending FROM nimis_stage.field_form_submission WHERE event_id=%s",
+            (body["event_id"],)).fetchone()[0]
+        assert evidence_pending is False
+
+    unknown=str(uuid4())
+    body2={**body,"event_id":str(uuid4()),"record_id":str(uuid4()),
+           "answers":{"photo_ids":[unknown],"incident_description":"Synthetic incident"}}
+    receipt2=client.post("/api/v1/stage/forms/sync/push",
+                headers=headers("collector"),json={"operations":[body2]})
+    assert receipt2.status_code==200,receipt2.text
+    assert receipt2.json()["results"][0]["status"]=="EVIDENCE_PENDING"
+
+
+def test_field_form_review_requires_approved_catalogue_and_delegated_technical_role(client,env):
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+      headers=headers("district"),json={"collector_id":ACTORS["collector"]}).status_code==200
+    now=datetime.now(timezone.utc).isoformat()
+    event_id=str(uuid4())
+    body={"event_id":event_id,"record_id":str(uuid4()),"revision":1,
+          "device_id":str(uuid4()),"scheme_id":scheme,
+          "form_id":"water_availability","form_version":1,
+          "period_code":"2026-11","captured_at":now,"observed_at":now,
+          "source":"Fictional field measurement","base_scheme_revision":1,
+          "answers":{"water_level":"2.8"}}
+    received=client.post("/api/v1/stage/forms/sync/push",
+        headers=headers("collector"),json={"operations":[body]})
+    assert received.status_code==200,received.text
+    assert received.json()["results"][0]["outcome"]=="accepted"
+    endpoint=f"/api/v1/stage/forms/submissions/{event_id}/decisions"
+    def decide(who,action,decision_id=None,reason=""):
+        return client.post(endpoint,headers=headers(who),json={
+            "decision_id":decision_id or str(uuid4()),"action":action,"reason":reason})
+    assert decide("district","VERIFY").status_code==409
+    with psycopg.connect(env) as conn:
+        conn.execute(
+          """INSERT INTO nimis_stage.approved_field_form
+             (form_id,form_version,approved_by)
+             VALUES ('water_availability',1,%s)
+             ON CONFLICT (form_id,form_version) DO NOTHING""",
+          (ACTORS["admin"],),
+        )
+    assert decide("collector","VERIFY").status_code==403
+    decision_id=str(uuid4())
+    verified=decide("district","VERIFY",decision_id)
+    assert verified.status_code==200,verified.text
+    assert verified.json()["status"]=="DISTRICT_VERIFIED"
+    assert decide("district","VERIFY",decision_id).json()["outcome"]=="duplicate"
+    assert decide("admin","PUBLISH").status_code==409
+    assert decide("province","REVIEW").json()["status"]=="PROVINCIAL_REVIEWED"
+    assert decide("admin","TECHNICAL_APPROVE").status_code==403
+    with psycopg.connect(env) as conn:
+        conn.execute(
+          """INSERT INTO nimis_stage.actor_permission
+             (actor_id,permission_code,granted_by)
+             VALUES (%s,'NATIONAL_TECHNICAL_APPROVE',%s)
+             ON CONFLICT (actor_id,permission_code)
+             DO UPDATE SET revoked_at=NULL""",
+          (ACTORS["admin"],ACTORS["admin"]),
+        )
+    technical=decide("admin","TECHNICAL_APPROVE")
+    assert technical.status_code==200,technical.text
+    assert technical.json()["status"]=="TECHNICAL_APPROVED"
+    assert decide("admin","PUBLISH").status_code==409
+    with psycopg.connect(env) as conn:
+        conn.execute(
+          """UPDATE nimis_stage.approved_field_form
+             SET reporting_mapping_approved=true
+             WHERE form_id='water_availability' AND form_version=1"""
+        )
+    approved=decide("admin","PUBLISH")
+    assert approved.status_code==200,approved.text
+    assert approved.json()["status"]=="PUBLISHED"
+    with psycopg.connect(env) as conn:
+        decisions=conn.execute(
+          "SELECT action FROM nimis_stage.field_form_decision WHERE submission_event_id=%s",
+          (event_id,),
+        ).fetchall()
+        assert len(decisions)==4
+        # Staged review must never directly overwrite master scheme.
+        assert conn.execute(
+          "SELECT revision FROM nimis_stage.scheme WHERE scheme_id=%s",
+          (scheme,),
+        ).fetchone()[0]==1
+
+def test_collector_web_photo_upload_preflight_is_explicitly_allowlisted(client):
+    test_uuid=str(uuid4())
+    response=client.options(
+      f"/api/v1/stage/forms/evidence/{test_uuid}?scheme_id={test_uuid}",
+      headers={
+        "Origin":"http://127.0.0.1:5191",
+        "Access-Control-Request-Method":"PUT",
+        "Access-Control-Request-Headers":"content-type,x-content-sha256,x-nimis-dev-actor",
+      })
+    assert response.status_code==200,response.text
+    assert response.headers["access-control-allow-origin"]=="http://127.0.0.1:5191"
+    assert "PUT" in response.headers["access-control-allow-methods"]
+    assert "x-content-sha256" in response.headers["access-control-allow-headers"].lower()
+    untrusted=client.options(
+      f"/api/v1/stage/forms/evidence/{test_uuid}?scheme_id={test_uuid}",
+      headers={"Origin":"https://untrusted.invalid",
+               "Access-Control-Request-Method":"PUT"})
+    assert untrusted.headers.get("access-control-allow-origin") is None

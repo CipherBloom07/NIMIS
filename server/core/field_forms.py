@@ -10,13 +10,99 @@ import json
 from datetime import datetime
 from pathlib import Path
 from uuid import UUID
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request, Response
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from server.core.app import actor, db, in_scope, need_role
 
 router = APIRouter(prefix="/api/v1/stage/forms", tags=["field-form-staging"])
+
+@router.put("/evidence/{photo_id}")
+async def upload_field_evidence(
+    photo_id: UUID, request: Request, scheme_id: UUID = Query(...),
+    x_content_sha256: str | None = Header(default=None), user=Depends(actor),
+):
+    """Checksum-verified private photo, <=500 KiB, scoped to assigned scheme."""
+    need_role(user,"data_collector")
+    mime=request.headers.get("content-type","").split(";")[0].strip().lower()
+    if mime not in ("image/jpeg","image/png","image/webp"):
+        raise HTTPException(415,detail="Supported field photo JPEG/PNG/WebP required")
+    length=request.headers.get("content-length")
+    if length and (not length.isdecimal() or int(length)>524288):
+        raise HTTPException(413,detail="Field photo exceeds 512 KiB")
+    data=await request.body()
+    if not data or len(data)>524288:
+        raise HTTPException(413,detail="Field photo must contain 1–524288 bytes")
+    if ((mime=="image/jpeg" and not data.startswith(bytes.fromhex("ffd8ff"))) or
+        (mime=="image/png" and not data.startswith(bytes.fromhex("89504e470d0a1a0a"))) or
+        (mime=="image/webp" and not (data.startswith(b"RIFF") and data[8:12]==b"WEBP"))):
+        raise HTTPException(422,detail="File content does not match declared image type")
+    digest=hashlib.sha256(data).hexdigest()
+    if not x_content_sha256 or x_content_sha256.lower()!=digest:
+        raise HTTPException(422,detail="Photo checksum does not match")
+    with db() as conn:
+        scheme=conn.execute(
+            "SELECT province_code,district_code FROM nimis_stage.scheme WHERE scheme_id=%s",
+            (scheme_id,),
+        ).fetchone()
+        if not scheme or not in_scope(user,scheme["province_code"],scheme["district_code"]):
+            raise HTTPException(403,detail="Scheme outside authorized collector scope")
+        assigned=conn.execute(
+            """SELECT 1 FROM nimis_stage.assignment WHERE scheme_id=%s AND
+               collector_id=%s AND revoked_at IS NULL""",
+            (scheme_id,user["actor_id"]),
+        ).fetchone()
+        if not assigned:
+            raise HTTPException(403,detail="Active collector assignment required")
+        inserted=conn.execute(
+            """INSERT INTO nimis_stage.field_attachment
+               (photo_id,uploaded_by,scheme_id,mime_type,sha256,content)
+               VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING RETURNING photo_id""",
+            (photo_id,user["actor_id"],scheme_id,mime,digest,data),
+        ).fetchone()
+        if inserted is None:
+            existing=conn.execute(
+                """SELECT uploaded_by,scheme_id,mime_type,sha256 FROM nimis_stage.field_attachment
+                   WHERE photo_id=%s""",(photo_id,),
+            ).fetchone()
+            if (not existing or existing["uploaded_by"]!=user["actor_id"] or
+                existing["scheme_id"]!=scheme_id or existing["sha256"]!=digest or
+                existing["mime_type"]!=mime):
+                raise HTTPException(409,detail="Photo ID already used for different evidence")
+            return {"photo_id":str(photo_id),"sha256":digest,"outcome":"duplicate"}
+        conn.execute(
+            """INSERT INTO nimis_stage.audit(actor_id,event_type,entity_type,entity_id,details)
+               VALUES (%s,'EVIDENCE_STORED','field_attachment',%s,%s::jsonb)""",
+            (user["actor_id"],photo_id,json.dumps({"scheme_id":str(scheme_id),
+                                                    "sha256":digest,"bytes":len(data)})),
+        )
+    return {"photo_id":str(photo_id),"sha256":digest,"outcome":"accepted"}
+
+
+@router.get("/evidence/{photo_id}")
+def read_field_evidence(photo_id: UUID, user=Depends(actor)):
+    """Private review-only download, with same geography rules as form detail."""
+    need_role(user,"admin","provincial_officer","district_officer","data_collector")
+    with db() as conn:
+        row=conn.execute(
+            """SELECT a.*,s.province_code,s.district_code FROM nimis_stage.field_attachment a
+               JOIN nimis_stage.scheme s ON s.scheme_id=a.scheme_id WHERE a.photo_id=%s""",
+            (photo_id,),
+        ).fetchone()
+    if not row:
+        raise HTTPException(404,detail="Photo not found")
+    if user["role_code"]=="data_collector":
+        allowed=(row["uploaded_by"]==user["actor_id"])
+    else:
+        allowed=in_scope(user,row["province_code"],row["district_code"])
+    if not allowed:raise HTTPException(404,detail="Photo not found")
+    return Response(content=bytes(row["content"]),media_type=row["mime_type"],
+                    headers={"Cache-Control":"private, no-store",
+                             "X-Content-SHA256":row["sha256"]})
+
+
 
 _CATALOGUE = json.loads(
     (Path(__file__).resolve().parent / "collector_form_catalogue.json").read_text("utf-8")
@@ -145,6 +231,25 @@ def _one(op: FormOperation, user: dict):
                 return {**result, "outcome": "duplicate"}
             return {**result, "outcome": "conflict", "reason": "Record revision or event ID already used"}
 
+        if evidence_pending and op.scheme_id:
+            media_fields={f["field_id"] for f in FORMS[op.form_id]["fields"]
+                          if f["type"] in ("photo","attachments")}
+            raw_ids=[]
+            for key in media_fields & op.answers.keys():
+                value=op.answers[key]
+                raw_ids.extend(value if isinstance(value,list) else [value])
+            try:
+                ids=[UUID(str(photo_id)) for photo_id in raw_ids if photo_id]
+            except (ValueError, TypeError):
+                return {**result,"outcome":"rejected",
+                        "reason":"Evidence references must be valid photo UUIDs"}
+            if ids:
+                uploaded=conn.execute(
+                    """SELECT count(*) AS total FROM nimis_stage.field_attachment
+                       WHERE photo_id = ANY(%s::uuid[]) AND uploaded_by=%s AND scheme_id=%s""",
+                    (ids,user["actor_id"],op.scheme_id),
+                ).fetchone()["total"]
+                evidence_pending = uploaded != len(set(ids))
         state = ("SCHEME_REVISION_CONFLICT"
                  if op.scheme_id and scheme["revision"] != op.base_scheme_revision else
                  "EVIDENCE_PENDING" if evidence_pending else "AWAITING_FORM_APPROVAL")
@@ -269,3 +374,108 @@ def field_form_detail(event_id: UUID, user=Depends(actor)):
             "status":row["status"],"evidence_pending":row["evidence_pending"],
             "answers":row["payload"],"official":False,
             "note":"Proposed form fields are not approved or published."}
+
+
+class FieldReviewDecision(BaseModel):
+    model_config=ConfigDict(extra="forbid")
+    decision_id:UUID
+    action:Literal["VERIFY","RETURN","REVIEW","TECHNICAL_APPROVE","PUBLISH"]
+    reason:str=Field(default="",max_length=500)
+
+    @model_validator(mode="after")
+    def check_reason(self):
+        self.reason=self.reason.strip()
+        if self.action=="RETURN" and not self.reason:
+            raise ValueError("Returning a form requires a reason")
+        return self
+
+
+@router.post("/submissions/{event_id}/decisions")
+def decide_field_form(event_id:UUID,body:FieldReviewDecision,user=Depends(actor)):
+    """Server-owned, atomic review; unapproved/unmapped forms cannot publish."""
+    need_role(user,"district_officer","provincial_officer","admin")
+    with db() as conn:
+        row=conn.execute(
+            """SELECT f.*,s.province_code,s.district_code FROM nimis_stage.field_form_submission f
+               LEFT JOIN nimis_stage.scheme s ON s.scheme_id=f.scheme_id
+               WHERE f.event_id=%s FOR UPDATE OF f""",(event_id,),
+        ).fetchone()
+        if not row:raise HTTPException(404,detail="Form submission not found")
+        if row["scheme_id"] is None:
+            # A request for a new scheme is not a registered master record.
+            raise HTTPException(409,detail="Unregistered proposed schemes require separate deduplication")
+        if not in_scope(user,row["province_code"],row["district_code"]):
+            raise HTTPException(403,detail="Outside the officer's authorized geography")
+        if user["actor_id"]==row["collector_id"]:
+            raise HTTPException(403,detail="Officers cannot review their own submissions")
+        existing=conn.execute(
+            "SELECT * FROM nimis_stage.field_form_decision WHERE decision_id=%s",
+            (body.decision_id,),
+        ).fetchone()
+        if existing:
+            if (existing["submission_event_id"]==event_id and
+                existing["actor_id"]==user["actor_id"] and
+                existing["action"]==body.action and
+                (existing["reason"] or "")==body.reason):
+                return {"outcome":"duplicate","event_id":str(event_id),
+                        "decision_id":str(body.decision_id),
+                        "status":existing["to_status"],"official":False}
+            raise HTTPException(409,detail="Decision UUID reused with different content")
+        status=row["status"]
+        transitions={
+            "VERIFY":("AWAITING_FORM_APPROVAL","DISTRICT_VERIFIED","district_officer"),
+            "REVIEW":("DISTRICT_VERIFIED","PROVINCIAL_REVIEWED","provincial_officer"),
+            "TECHNICAL_APPROVE":("PROVINCIAL_REVIEWED","TECHNICAL_APPROVED","admin"),
+            "PUBLISH":("TECHNICAL_APPROVED","PUBLISHED","admin"),
+        }
+        if body.action=="RETURN":
+            allowed={"AWAITING_FORM_APPROVAL":"district_officer",
+                     "DISTRICT_VERIFIED":"provincial_officer"}
+            needed=allowed.get(status)
+            if not needed:raise HTTPException(409,detail="Return not allowed at this stage")
+            to_status="RETURNED"
+        else:
+            expected,to_status,needed=transitions[body.action]
+            if status!=expected:raise HTTPException(409,detail="Incorrect review stage")
+        need_role(user,needed)
+        if body.action in ("VERIFY","PUBLISH"):
+            approved=conn.execute(
+                """SELECT reporting_mapping_approved
+                   FROM nimis_stage.approved_field_form
+                   WHERE form_id=%s AND form_version=%s""",
+                (row["form_id"],row["form_version"]),
+            ).fetchone()
+            if not approved:
+                raise HTTPException(409,detail="Institutional form version has not been approved")
+            if body.action=="PUBLISH" and not approved["reporting_mapping_approved"]:
+                raise HTTPException(409,detail="Reporting mapping is not approved")
+        if body.action=="VERIFY" and row["evidence_pending"]:
+            raise HTTPException(409,detail="Photo evidence remains incomplete")
+        if body.action=="TECHNICAL_APPROVE":
+            delegated=conn.execute(
+                """SELECT 1 FROM nimis_stage.actor_permission
+                   WHERE actor_id=%s AND permission_code='NATIONAL_TECHNICAL_APPROVE'
+                     AND revoked_at IS NULL""",(user["actor_id"],),
+            ).fetchone()
+            if not delegated:
+                raise HTTPException(403,detail="National technical delegation required")
+        conn.execute(
+            "UPDATE nimis_stage.field_form_submission SET status=%s WHERE event_id=%s",
+            (to_status,event_id),
+        )
+        conn.execute(
+            """INSERT INTO nimis_stage.field_form_decision
+               (decision_id,submission_event_id,actor_id,action,from_status,to_status,reason)
+               VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+            (body.decision_id,event_id,user["actor_id"],body.action,status,to_status,
+             body.reason or None),
+        )
+        conn.execute(
+            """INSERT INTO nimis_stage.audit(actor_id,event_type,entity_type,entity_id,details)
+               VALUES (%s,'FIELD_FORM_DECISION','field_form',%s,%s::jsonb)""",
+            (user["actor_id"],event_id,json.dumps({"action":body.action,
+                "from_status":status,"to_status":to_status})),
+        )
+    return {"outcome":"accepted","event_id":str(event_id),
+            "decision_id":str(body.decision_id),"status":to_status,
+            "official":False}
