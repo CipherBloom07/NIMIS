@@ -16,6 +16,8 @@ export default function CoreWorkflowLab(){
  const [inbox,setInbox]=useState([]);
  const [fieldInbox,setFieldInbox]=useState([]);
  const [selectedField,setSelectedField]=useState(null);
+ const [publishedFields,setPublishedFields]=useState(null);
+ const [reportMonth,setReportMonth]=useState(now().slice(0,7));
  const [report,setReport]=useState(null);
  const [schemeId,setSchemeId]=useState('00000000-0000-4000-8000-000000001000');
  const [note,setNote]=useState('Fictional scheme inspection — no real data');
@@ -108,6 +110,65 @@ export default function CoreWorkflowLab(){
    return {message:'Read unapproved '+result.form_id+' field record'};
   });
  }
+ async function decideField(row,action,role){
+  await perform('Field form '+action,async()=>{
+    const response=await call('/forms/submissions/'+encodeURIComponent(row.event_id)+'/decisions',
+      'POST',{decision_id:uid(),action,reason:action==='RETURN'?'Requires correction':''},role);
+    const updated=await call('/forms/inbox');
+    setFieldInbox(updated.items||[]);
+    return response;
+  });
+ }
+ async function exportPublishedCsv(){
+  await perform('Export scoped published observations',async()=>{
+    if(who==='collector')throw new Error('Officer permission required');
+    const url=ROOT+'/forms/reports/published.csv?period_code='+encodeURIComponent(reportMonth);
+    const response=await fetch(url,{
+      cache:'no-store',headers:{'X-Nimis-Dev-Actor':DEMO[who].id},
+    });
+    if(!response.ok)throw new Error('Export denied: '+response.status);
+    const blob=await response.blob();
+    if(blob.size>10*1024*1024)throw new Error('Export too large for this test');
+    const href=URL.createObjectURL(blob);
+    try{
+      const anchor=document.createElement('a');
+      anchor.href=href;anchor.download='nimis-published-pilot-'+reportMonth+'.csv';
+      document.body.append(anchor);anchor.click();anchor.remove();
+    }finally{window.setTimeout(()=>URL.revokeObjectURL(href),1000)}
+    return {message:'Scoped published records exported (FICTIONAL TEST ONLY)'};
+  });
+ }
+ async function loadPublishedForms(){
+  await perform('Published field observations',async()=>{
+    if(who==='collector')throw new Error('Officer permissions required');
+    const result=await call('/forms/reports/published?period_code='+encodeURIComponent(reportMonth));
+    if(result.official!==false||result.data_status!=='PUBLISHED_DEMO_ONLY'){
+      throw new Error('Unexpected official-reporting claim from isolated Core');
+    }
+    setPublishedFields(result);
+    return {message:result.record_count+' published review-only records'};
+  });
+ }
+ async function loadMorePublishedForms(){
+  if(!publishedFields?.has_more||!Number.isInteger(publishedFields.next_offset))return;
+  await perform('Next reporting page',async()=>{
+    const offset=publishedFields.next_offset;
+    const next=await call('/forms/reports/published?period_code='+
+      encodeURIComponent(reportMonth)+'&offset='+offset+'&limit=100');
+    if(next.official!==false||next.data_status!=='PUBLISHED_DEMO_ONLY'||
+       next.offset!==offset||!Array.isArray(next.items)){
+      throw new Error('Invalid published reporting page');
+    }
+    const existing=new Set(publishedFields.items.map(row=>row.event_id));
+    setPublishedFields({
+      ...next,
+      items:[...publishedFields.items,...next.items.filter(row=>!existing.has(row.event_id))],
+      record_count:publishedFields.items.length+
+        next.items.filter(row=>!existing.has(row.event_id)).length,
+    });
+    return {message:'Additional published review-only records loaded'};
+  });
+ }
  async function loadReport(){
   await perform('Published area report',async()=>{
     const period=now().slice(0,7);
@@ -126,7 +187,7 @@ export default function CoreWorkflowLab(){
   </span></div>
   <section className="panel" style={{padding:18,display:'grid',gap:15}}>
     <label className="reg-field"><span>Development test persona</span>
-      <select value={who} onChange={e=>{setWho(e.target.value);setInbox([])}}>
+      <select value={who} onChange={e=>{setWho(e.target.value);setInbox([]);setFieldInbox([]);setSelectedField(null);setPublishedFields(null);setSchemes([]);setReport(null)}}>
         {Object.entries(DEMO).map(([key,value])=><option key={key} value={key}>{value.label}</option>)}
       </select></label>
     <div style={{display:'flex',gap:9,flexWrap:'wrap'}}>
@@ -170,7 +231,15 @@ export default function CoreWorkflowLab(){
     <tbody>{fieldInbox.map(row=><tr key={row.event_id}>
       <td>{row.scheme_name||'New scheme request'}</td><td>{row.form_id}</td>
       <td>{row.period_code}</td><td>{row.status}{row.evidence_pending?' · Photos pending':''}
-        <button type="button" className="ghost-btn" disabled={busy} onClick={()=>void inspectField(row)}>Inspect test data</button></td>
+        <button type="button" className="ghost-btn" disabled={busy} onClick={()=>void inspectField(row)}>Inspect test data</button>
+        {(()=>{
+          const action=who==='district'&&row.status==='AWAITING_FORM_APPROVAL'?'VERIFY':
+            who==='province'&&row.status==='DISTRICT_VERIFIED'?'REVIEW':
+            who==='admin'&&row.status==='PROVINCIAL_REVIEWED'?'TECHNICAL_APPROVE':
+            who==='admin'&&row.status==='TECHNICAL_APPROVED'?'PUBLISH':null;
+          return action?<button type="button" className="reg-primary" disabled={busy}
+            onClick={()=>void decideField(row,action,who)}>{action.replaceAll('_',' ')}</button>:null;
+        })()}</td>
     </tr>)}</tbody></table></div>
     {!fieldInbox.length&&<p style={{padding:18}}>No proposed form submissions visible to this test officer. Select Connect / Refresh.</p>}
     {selectedField&&<div style={{padding:18}}>
@@ -180,6 +249,33 @@ export default function CoreWorkflowLab(){
       <p><strong>Development evidence only.</strong> Not reviewed, verified, approved or published.</p>
     </div>}
   </section>
+  {who!=='collector'&&<section className="panel" style={{padding:18}}>
+   <h2>Published field observations — NIMIS module data (test only)</h2>
+   <p>Only records passing form approval, field review and mapping approval appear. Not official national totals.</p>
+   <div style={{display:'flex',alignItems:'end',gap:10,flexWrap:'wrap',paddingBlock:12}}>
+    <label className="reg-field"><span>Reporting month</span>
+     <input type="month" value={reportMonth} onChange={e=>{setReportMonth(e.target.value);setPublishedFields(null)}}/>
+    </label>
+    <button className="reg-primary" disabled={busy} onClick={()=>void loadPublishedForms()}>
+      <RefreshCw size={16}/> Load published observations</button>
+    <button className="ghost-btn" disabled={busy} onClick={()=>void exportPublishedCsv()}>
+      Export published test CSV</button>
+   </div>
+   {publishedFields&&<div>
+    <p><strong>{publishedFields.items.length} scoped records loaded</strong> · {publishedFields.data_status}
+       {publishedFields.has_more?' · More records available':''}</p>
+    {publishedFields.has_more&&<button className="ghost-btn" disabled={busy}
+       onClick={()=>void loadMorePublishedForms()}>Load next reporting page</button>}
+    <div className="table-wrap"><table><thead><tr><th>NIMIS Module</th><th>Scheme / district</th><th>Form / period</th><th>Verified values</th></tr></thead>
+     <tbody>{publishedFields.items.map(row=><tr key={row.event_id}>
+      <td>{row.module.replaceAll('_',' ')}</td><td>{row.scheme_name}<small style={{display:'block'}}>{row.district_code}</small></td>
+      <td>{row.form_id} · {row.period_code}<small style={{display:'block'}}>Source: {row.source}</small></td>
+      <td>{row.metrics.length?row.metrics.map(m=><div key={m.field}>{m.field.replaceAll('_',' ')}: <strong>{m.value} {m.unit}</strong></div>):'Reviewed record · no additive numeric metrics'}</td>
+     </tr>)}</tbody></table></div>
+    {!publishedFields.items.length&&<p>No published, mapped observations for this reporting period.</p>}
+    <p><strong>No automatic national aggregation:</strong> data is shown by form, scheme and record. Duplicate crop and area indicators are not mixed.</p>
+   </div>}
+  </section>}
   {report&&<section className="panel" style={{padding:18}}><h2>Published-only area report — fictional data</h2>
     <p>Reporting period: {report.period_code} · {report.schemes_reporting} eligible schemes</p>
     <p>Equipped: <strong>{report.total_hectares?.equipped_area_ha||'0'} ha</strong> · Functional: <strong>{report.total_hectares?.functional_area_ha||'0'} ha</strong> · Actually irrigated: <strong>{report.total_hectares?.actually_irrigated_area_ha||'0'} ha</strong></p>

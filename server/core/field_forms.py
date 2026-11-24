@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+from decimal import Decimal,InvalidOperation
 from datetime import datetime
 from pathlib import Path
 from uuid import UUID
@@ -166,6 +168,50 @@ def _validate(op: FormOperation):
                 raise ValueError("GPS coordinates out of bounds: " + key)
         if typ in ("photo", "attachments") and not isinstance(value, (str,list)):
             raise ValueError("Invalid media reference: " + key)
+        if typ in ("photo", "attachments"):
+            ids=value if isinstance(value,list) else [value]
+            if len(ids)>30:
+                raise ValueError("Too many photographs: " + key)
+            if any(not isinstance(x,str) or not x.strip() for x in ids):
+                raise ValueError("Invalid evidence reference: " + key)
+            try:
+                for photo_id in ids:UUID(photo_id)
+            except (ValueError,TypeError):
+                raise ValueError("Evidence must reference stored photo UUIDs: " + key)
+        if typ=="integer" and (isinstance(value,bool) or
+            str(value).strip().startswith("-") or not str(value).strip().isdigit()):
+            raise ValueError("Expected non-negative whole number: " + key)
+        if typ in ("multi","reference_list"):
+            if (not isinstance(value,list) or len(value)>100 or
+                any(not isinstance(x,str) or not 1<=len(x.strip())<=180
+                    for x in value)):
+                raise ValueError("Expected a list of concise entries: " + key)
+        if typ=="repeating_group":
+            if (not isinstance(value,list) or len(value)>100 or
+                any(not isinstance(x,dict) or not x or len(x)>30
+                    for x in value)):
+                raise ValueError("Expected structured repeated records: " + key)
+        if typ=="group" and (not isinstance(value,dict) or len(value)>50):
+            raise ValueError("Expected a structured record: " + key)
+        if typ.startswith("choice") and (not isinstance(value,str) or
+            not 1<=len(value.strip())<=160):
+            raise ValueError("Select a valid answer: " + key)
+        exact_choices={
+            "choice:yes_no":{"Yes","No"},
+            "choice:good_moderate_bad":{"Good","Moderate","Bad"},
+            "choice:gauge_visual_estimate":{"gauge","visual","estimate"},
+            "choice:SI87_B1_B2_B3_B4_SIRP_other":{
+              "SI87","B1","B2","B3","B4","SIRP","other"},
+        }
+        if typ in exact_choices and value not in exact_choices[typ]:
+            raise ValueError("Unrecognized approved-choice candidate: " + key)
+        if typ=="uuid":
+            try:UUID(str(value))
+            except (ValueError,TypeError):
+                raise ValueError("Expected a UUID: " + key)
+        if typ=="date" and (not isinstance(value,str) or
+            not re.fullmatch(r"\d{4}-\d{2}-\d{2}",value)):
+            raise ValueError("Expected YYYY-MM-DD date: " + key)
     if op.scheme_id is None and op.form_id != "new_scheme_request":
         raise ValueError("An existing scheme needs a canonical UUID")
     if op.form_id == "new_scheme_request" and op.scheme_id is not None:
@@ -175,10 +221,18 @@ def _validate(op: FormOperation):
             raise ValueError("New scheme request needs name, province and district")
     if op.form_id != "new_scheme_request" and op.base_scheme_revision is None:
         raise ValueError("Current master revision required")
-    equipped = op.answers.get("equipped_area_ha")
-    functional = op.answers.get("functional_area_ha")
-    if equipped not in (None,"") and functional not in (None,"") and float(functional) > float(equipped):
-        raise ValueError("Functional area cannot exceed equipped area")
+    def ensure_limit(lower,upper,message):
+        a,b=op.answers.get(lower),op.answers.get(upper)
+        if a not in (None,"") and b not in (None,"") and Decimal(str(a))>Decimal(str(b)):
+            raise ValueError(message)
+    ensure_limit("functional_area_ha","equipped_area_ha",
+                 "Functional area cannot exceed equipped area")
+    ensure_limit("actually_irrigated_area_ha","equipped_area_ha",
+                 "Irrigated area cannot exceed equipped area")
+    ensure_limit("harvested_area_ha","planted_area_ha",
+                 "Harvested area cannot exceed planted area")
+    ensure_limit("substantially_complete_ha","target_area_ha",
+                 "Completed area cannot exceed project target")
     media_types = {"photo", "attachments"}
     evidence_pending = any(
         allowed[key]["type"] in media_types and bool(value)
@@ -231,6 +285,28 @@ def _one(op: FormOperation, user: dict):
                 return {**result, "outcome": "duplicate"}
             return {**result, "outcome": "conflict", "reason": "Record revision or event ID already used"}
 
+        # Corrections retain the original record identity, field dictionary,
+        # collector assignment and scheme. An in-review or already published
+        # submission cannot be silently overwritten by a new local revision.
+        prior=conn.execute(
+            """SELECT revision,collector_id,scheme_id,form_id,form_version,status
+               FROM nimis_stage.field_form_submission
+               WHERE record_id=%s ORDER BY revision DESC LIMIT 1""",
+            (op.record_id,),
+        ).fetchone()
+        if prior:
+            if (prior["collector_id"]!=user["actor_id"] or
+                prior["scheme_id"]!=op.scheme_id or
+                prior["form_id"]!=op.form_id or
+                prior["form_version"]!=op.form_version):
+                return {**result,"outcome":"rejected",
+                        "reason":"A corrected record must preserve its original collector, scheme and form"}
+            if op.revision<=prior["revision"]:
+                return {**result,"outcome":"conflict",
+                        "reason":"Stale correction revision; preserve the original receipt"}
+            if prior["status"] not in ("RETURNED","SCHEME_REVISION_CONFLICT"):
+                return {**result,"outcome":"conflict",
+                        "reason":"Existing record is still in review or published; open a new observation instead"}
         if evidence_pending and op.scheme_id:
             media_fields={f["field_id"] for f in FORMS[op.form_id]["fields"]
                           if f["type"] in ("photo","attachments")}
@@ -479,3 +555,45 @@ def decide_field_form(event_id:UUID,body:FieldReviewDecision,user=Depends(actor)
     return {"outcome":"accepted","event_id":str(event_id),
             "decision_id":str(body.decision_id),"status":to_status,
             "official":False}
+
+
+@router.get("/sync/status/{event_id}")
+def field_form_sync_status(event_id:UUID,user=Depends(actor)):
+    """Private acknowledgement/review status; collector sees only own receipts."""
+    need_role(user,"admin","provincial_officer","district_officer","data_collector")
+    with db() as conn:
+        row=conn.execute(
+          """SELECT f.event_id,f.collector_id,f.status,f.evidence_pending,
+                    f.form_id,f.form_version,f.scheme_id,f.record_id,f.revision,
+                    s.province_code,s.district_code,f.payload
+             FROM nimis_stage.field_form_submission f
+             LEFT JOIN nimis_stage.scheme s ON s.scheme_id=f.scheme_id
+             WHERE f.event_id=%s""",(event_id,),
+        ).fetchone()
+        if not row:raise HTTPException(404,detail="Receipt not found")
+        if row["scheme_id"] is None:
+            province,district=row["payload"].get("province"),row["payload"].get("district")
+        else:province,district=row["province_code"],row["district_code"]
+        if user["role_code"]=="data_collector":
+            permitted=row["collector_id"]==user["actor_id"]
+        else:
+            permitted=in_scope(user,province,district)
+        if not permitted:raise HTTPException(404,detail="Receipt not found")
+        history=conn.execute(
+          """SELECT action,to_status,reason,decided_at
+             FROM nimis_stage.field_form_decision
+             WHERE submission_event_id=%s ORDER BY decided_at,decision_id""",
+          (event_id,),
+        ).fetchall()
+    return {
+      "source":"ISOLATED_DEVELOPMENT","official":False,
+      "event_id":str(row["event_id"]),
+      "record_id":str(row["record_id"]),
+      "revision":row["revision"],"form_id":row["form_id"],
+      "scheme_id":str(row["scheme_id"]) if row["scheme_id"] else None,
+      "status":row["status"],"evidence_pending":row["evidence_pending"],
+      "decisions":[{
+         "action":x["action"],"status":x["to_status"],"reason":x["reason"],
+         "decided_at":x["decided_at"].isoformat(),
+      } for x in history],
+    }

@@ -561,3 +561,234 @@ def test_collector_web_photo_upload_preflight_is_explicitly_allowlisted(client):
       headers={"Origin":"https://untrusted.invalid",
                "Access-Control-Request-Method":"PUT"})
     assert untrusted.headers.get("access-control-allow-origin") is None
+
+
+def test_published_form_reporting_requires_approved_mapping_and_officer_chain(client,env):
+    from uuid import uuid4
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+        headers=headers("district"),json={"collector_id":ACTORS["collector"]}).status_code==200
+    now=datetime.now(timezone.utc).isoformat()
+    event=str(uuid4())
+    payload={
+      "event_id":event,"record_id":str(uuid4()),"revision":1,"device_id":str(uuid4()),
+      "scheme_id":scheme,"form_id":"water_availability","form_version":1,
+      "period_code":"2026-11","captured_at":now,"observed_at":now,
+      "source":"Fictional meter test","base_scheme_revision":1,
+      "answers":{"water_level":"3.20","rainfall":"17.5","storage_percent":"65"},
+    }
+    pushed=client.post("/api/v1/stage/forms/sync/push",
+        headers=headers("collector"),json={"operations":[payload]})
+    assert pushed.status_code==200,pushed.text
+    assert pushed.json()["results"][0]["outcome"]=="accepted"
+    report_url="/api/v1/stage/forms/reports/published?period_code=2026-11"
+    def report(who):
+        return client.get(report_url,headers=headers(who))
+    before=report("district")
+    assert before.status_code==200,before.text
+    assert not any(x["event_id"]==event for x in before.json()["items"])
+    assert report("collector").status_code==403
+    assert not any(x["event_id"]==event for x in report("other_district").json()["items"])
+
+    with psycopg.connect(env) as conn:
+        conn.execute(
+          """INSERT INTO nimis_stage.approved_field_form
+              (form_id,form_version,approved_by,reporting_mapping_approved)
+              VALUES ('water_availability',1,%s,false)
+              ON CONFLICT (form_id,form_version)
+              DO UPDATE SET reporting_mapping_approved=false""",(ACTORS["admin"],))
+        conn.execute(
+          """INSERT INTO nimis_stage.actor_permission
+              (actor_id,permission_code,granted_by)
+              VALUES (%s,'NATIONAL_TECHNICAL_APPROVE',%s)
+              ON CONFLICT(actor_id,permission_code)
+              DO UPDATE SET revoked_at=NULL""",(ACTORS["admin"],ACTORS["admin"]))
+    endpoint=f"/api/v1/stage/forms/submissions/{event}/decisions"
+    def decide(who,action):
+        return client.post(endpoint,headers=headers(who),
+              json={"decision_id":str(uuid4()),"action":action,"reason":""})
+    assert decide("district","VERIFY").status_code==200
+    assert decide("province","REVIEW").status_code==200
+    assert decide("admin","TECHNICAL_APPROVE").status_code==200
+    assert decide("admin","PUBLISH").status_code==409
+    assert not any(x["event_id"]==event for x in report("admin").json()["items"])
+    with psycopg.connect(env) as conn:
+        conn.execute(
+          """UPDATE nimis_stage.approved_field_form
+             SET reporting_mapping_approved=true
+             WHERE form_id='water_availability' AND form_version=1""")
+    assert decide("admin","PUBLISH").status_code==200
+    published=report("district")
+    assert published.status_code==200,published.text
+    row=next(x for x in published.json()["items"] if x["event_id"]==event)
+    assert row["module"]=="water_resources"
+    assert row["scheme_id"]==scheme
+    first_page=client.get(report_url+"&limit=1&offset=0",headers=headers("district"))
+    assert first_page.status_code==200,first_page.text
+    assert len(first_page.json()["items"])==1
+    assert first_page.json()["page_limit"]==1
+    beyond=client.get(report_url+"&limit=1&offset=100",headers=headers("district"))
+    assert beyond.status_code==200,beyond.text
+    assert beyond.json()["items"]==[]
+    assert client.get(report_url+"&limit=501",headers=headers("district")).status_code==422
+    assert client.get(report_url+"&offset=-1",headers=headers("district")).status_code==422
+    assert row["status"]=="PUBLISHED"
+    assert row["metrics"]==[
+      {"field":"water_level","value":"3.20","unit":"m"},
+      {"field":"storage_percent","value":"65","unit":"percent"},
+      {"field":"rainfall","value":"17.5","unit":"mm"},
+    ]
+    assert published.json()["official"] is False
+    assert published.json()["aggregation_policy"].startswith("NO_NATIONAL_TOTALS")
+    csv_result=client.get("/api/v1/stage/forms/reports/published.csv?period_code=2026-11",
+                          headers=headers("district"))
+    assert csv_result.status_code==200,csv_result.text
+    import csv,io
+    csv_rows=list(csv.DictReader(io.StringIO(csv_result.text)))
+    assert any(x["event_id"]==event and x["field_id"]=="rainfall" and
+               x["unit"]=="mm" and x["data_status"]=="PUBLISHED_DEMO_ONLY"
+               for x in csv_rows)
+    assert client.get("/api/v1/stage/forms/reports/published.csv?period_code=2026-11",
+                      headers=headers("collector")).status_code==403
+    district_outside=client.get("/api/v1/stage/forms/reports/published.csv?period_code=2026-11",
+                               headers=headers("other_district"))
+    assert district_outside.status_code==200
+    assert all(x["event_id"]!=event for x in csv.DictReader(io.StringIO(district_outside.text)))
+    assert not any(x["event_id"]==event for x in report("other_district").json()["items"])
+    assert client.get(report_url+"&form_id=not_approved",
+        headers=headers("admin")).status_code==422
+
+
+def test_published_reporting_rejects_mixed_currencies_and_nonadditive_fields():
+    from server.core.published_field_reports import _metrics, MODULES
+    assert _metrics("om_finance",{"expenditure":"20","farmer_contributions":"10"})==[]
+    assert _metrics("water_availability",{"water_level":"Infinity","storage_percent":"125"})==[]
+    assert _metrics("water_availability",{"storage_percent":"34.2"})==[
+      {"field":"storage_percent","value":"34.2","unit":"percent"}]
+    assert "new_scheme_request" not in MODULES
+    from server.core.published_field_reports import _csv_safe
+    assert _csv_safe("=HYPERLINK(1)")=="'=HYPERLINK(1)"
+    assert _csv_safe(" +SUM(3)")=="' +SUM(3)"
+    assert _csv_safe("Canal A")=="Canal A"
+
+
+def test_collector_receipt_status_returns_actual_officer_reason_without_geographic_leak(client):
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+      headers=headers("district"),json={"collector_id":ACTORS["collector"]}).status_code==200
+    now=datetime.now(timezone.utc).isoformat()
+    event=str(uuid4())
+    body={"event_id":event,"record_id":str(uuid4()),"revision":1,
+          "device_id":str(uuid4()),"scheme_id":scheme,"form_id":"risk_register",
+          "form_version":1,"period_code":"2026-11","captured_at":now,
+          "observed_at":now,"source":"Fictional risk assessment",
+          "base_scheme_revision":1,
+          "answers":{"risk_description":"Synthetic power outage","severity":"High"}}
+    submitted=client.post("/api/v1/stage/forms/sync/push",
+      headers=headers("collector"),json={"operations":[body]})
+    assert submitted.status_code==200,submitted.text
+    assert submitted.json()["results"][0]["outcome"]=="accepted"
+    endpoint=f"/api/v1/stage/forms/sync/status/{event}"
+    owner=client.get(endpoint,headers=headers("collector"))
+    assert owner.status_code==200,owner.text
+    assert owner.json()["status"]=="AWAITING_FORM_APPROVAL"
+    assert client.get(endpoint,headers=headers("other_district")).status_code==404
+    returned=client.post(f"/api/v1/stage/forms/submissions/{event}/decisions",
+      headers=headers("district"),json={
+        "decision_id":str(uuid4()),"action":"RETURN",
+        "reason":"Please recheck site observation"})
+    assert returned.status_code==200,returned.text
+    fresh=client.get(endpoint,headers=headers("collector"))
+    assert fresh.status_code==200,fresh.text
+    assert fresh.json()["status"]=="RETURNED"
+    assert fresh.json()["decisions"][-1]["reason"]=="Please recheck site observation"
+    assert fresh.json()["official"] is False
+
+def test_unapproved_structured_capture_is_schema_typed_and_areas_constrained():
+    from server.core.field_forms import FormOperation,_validate
+    now=datetime.now(timezone.utc)
+    base={
+      "event_id":uuid4(),"record_id":uuid4(),"revision":1,
+      "device_id":uuid4(),"scheme_id":uuid4(),"form_id":"baseline",
+      "form_version":1,"period_code":"2026-11",
+      "captured_at":now,"observed_at":now,"source":"Fictional survey",
+      "base_scheme_revision":1,
+    }
+    valid=FormOperation(**base,answers={
+      "officers":[{"reference":"officer-1"}],
+      "major_crops":["maize","wheat"],
+      "equipped_area_ha":"20","functional_area_ha":"17",
+      "water_management":{"allocation":"schedule"},
+    })
+    digest,evidence=_validate(valid)
+    assert len(digest)==64 and evidence is False
+    broken=[
+      {"officers":"not structured"},
+      {"major_crops":"maize,wheat"},
+      {"water_management":"plain text"},
+      {"functional_area_ha":"25","equipped_area_ha":"20"},
+      {"equipped_area_ha":"NaN"},
+    ]
+    for values in broken:
+        with pytest.raises(ValueError):
+            _validate(FormOperation(**base,answers=values))
+
+def test_windows_core_launcher_has_complete_admin_password_matcher():
+    source=(Path(__file__).resolve().parents[2] / "scripts" / "START_NIMIS_CORE_LOCAL.ps1").read_text(encoding="utf-8")
+    assert "'^NIMIS_PG_ADMIN_PASSWORD=[a-fA-F0-9]{64}$' }" in source
+    assert "COLLECT_LOCAL_POSTGRESQL_ADMIN_PASSWORD_NOT_FOUND" in source
+
+
+def test_returned_form_correction_preserves_lineage_and_blocks_unapproved_overwrite(client,env):
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+      headers=headers("district"),json={"collector_id":ACTORS["collector"]}).status_code==200
+    now=datetime.now(timezone.utc).isoformat()
+    record=str(uuid4())
+    first_event=str(uuid4())
+    body={"event_id":first_event,"record_id":record,"revision":1,
+          "device_id":str(uuid4()),"scheme_id":scheme,"form_id":"water_availability",
+          "form_version":1,"period_code":"2026-11","captured_at":now,
+          "observed_at":now,"source":"Fictional meter reading",
+          "base_scheme_revision":1,"answers":{"water_level":"2.1"}}
+    url="/api/v1/stage/forms/sync/push"
+    def send(item):
+        res=client.post(url,headers=headers("collector"),json={"operations":[item]})
+        assert res.status_code==200,res.text
+        return res.json()["results"][0]
+    first=send(body)
+    assert first["outcome"]=="accepted"
+    assert send(body)["outcome"]=="duplicate"
+    in_review={**body,"event_id":str(uuid4()),"revision":2,
+               "answers":{"water_level":"2.5"}}
+    assert send(in_review)["outcome"]=="conflict"
+    returned=client.post(
+      f"/api/v1/stage/forms/submissions/{first_event}/decisions",
+      headers=headers("district"),json={
+        "decision_id":str(uuid4()),"action":"RETURN",
+        "reason":"Recheck the meter calibration"})
+    assert returned.status_code==200,returned.text
+    correction={**in_review,"event_id":str(uuid4())}
+    accepted=send(correction)
+    assert accepted["outcome"]=="accepted"
+    assert accepted["status"]=="AWAITING_FORM_APPROVAL"
+    assert send(correction)["outcome"]=="duplicate"
+    forged={**correction,"event_id":str(uuid4()),"revision":3,
+            "form_id":"energy_power","answers":{"outage_hours":"3"}}
+    assert send(forged)["outcome"]=="rejected"
+    competing={**correction,"event_id":str(uuid4()),"revision":3,
+               "answers":{"water_level":"2.6"}}
+    assert send(competing)["outcome"]=="conflict"
+    with psycopg.connect(env) as conn:
+        rows=conn.execute(
+          """SELECT revision,status,payload->>'water_level' AS level
+             FROM nimis_stage.field_form_submission
+             WHERE record_id=%s ORDER BY revision""",(record,),
+        ).fetchall()
+        assert [(x[0],x[1],x[2]) for x in rows]==[
+          (1,"RETURNED","2.1"),(2,"AWAITING_FORM_APPROVAL","2.5")]
+        assert conn.execute(
+          "SELECT revision FROM nimis_stage.scheme WHERE scheme_id=%s",
+          (scheme,),
+        ).fetchone()[0]==1
+
