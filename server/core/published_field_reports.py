@@ -64,6 +64,8 @@ def _metrics(form_id:str,payload:dict)->list[dict]:
 def published_form_report(
     period_code:str=Query(...,pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
     form_id:str|None=Query(default=None,min_length=3,max_length=90),
+    offset:int=Query(default=0,ge=0,le=100000),
+    limit:int=Query(default=100,ge=1,le=500),
     user=Depends(actor),
 ):
     need_role(user,"admin","provincial_officer","district_officer")
@@ -103,12 +105,12 @@ def published_form_report(
                WHERE """+" AND ".join(where)+
                """) t WHERE t.version_rank=1
                   ORDER BY t.scheme_code,t.form_id,t.observed_at DESC,t.event_id
-                  LIMIT 501""",
-            tuple(params),
+                  LIMIT %s OFFSET %s""",
+            tuple([*params,limit+1,offset]),
         ).fetchall()
-    more=len(rows)>500
+    more=len(rows)>limit
     items=[]
-    for row in rows[:500]:
+    for row in rows[:limit]:
         form=row["form_id"]
         if form not in MODULES:
             continue
@@ -135,7 +137,8 @@ def published_form_report(
         "source":"ISOLATED_DEVELOPMENT","official":False,
         "data_status":"PUBLISHED_DEMO_ONLY",
         "period_code":period_code,
-        "record_count":len(items),"has_more":more,
+        "record_count":len(items),"has_more":more,"offset":offset,
+        "next_offset":offset+limit if more else None,"page_limit":limit,
         "items":items,
         "aggregation_policy":"NO_NATIONAL_TOTALS: versioned observations are presented by scheme, form and record; overlapping schemes and mixed units are never summed.",
     }
@@ -155,7 +158,11 @@ def published_form_csv(
     user=Depends(actor),
 ):
     """Scoped row-level Power BI/CSV *pilot* export; never official totals."""
-    result=published_form_report(period_code=period_code,form_id=form_id,user=user)
+    result=published_form_report(period_code=period_code,form_id=form_id,
+                                 offset=0,limit=500,user=user)
+    if result["has_more"]:
+        # Returning a silently truncated CSV is worse than an explicit error.
+        raise HTTPException(409,detail="Export exceeds 500 records; narrow the month/form or use paginated JSON")
     output=io.StringIO(newline="")
     writer=csv.writer(output)
     writer.writerow([

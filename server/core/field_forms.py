@@ -285,6 +285,28 @@ def _one(op: FormOperation, user: dict):
                 return {**result, "outcome": "duplicate"}
             return {**result, "outcome": "conflict", "reason": "Record revision or event ID already used"}
 
+        # Corrections retain the original record identity, field dictionary,
+        # collector assignment and scheme. An in-review or already published
+        # submission cannot be silently overwritten by a new local revision.
+        prior=conn.execute(
+            """SELECT revision,collector_id,scheme_id,form_id,form_version,status
+               FROM nimis_stage.field_form_submission
+               WHERE record_id=%s ORDER BY revision DESC LIMIT 1""",
+            (op.record_id,),
+        ).fetchone()
+        if prior:
+            if (prior["collector_id"]!=user["actor_id"] or
+                prior["scheme_id"]!=op.scheme_id or
+                prior["form_id"]!=op.form_id or
+                prior["form_version"]!=op.form_version):
+                return {**result,"outcome":"rejected",
+                        "reason":"A corrected record must preserve its original collector, scheme and form"}
+            if op.revision<=prior["revision"]:
+                return {**result,"outcome":"conflict",
+                        "reason":"Stale correction revision; preserve the original receipt"}
+            if prior["status"] not in ("RETURNED","SCHEME_REVISION_CONFLICT"):
+                return {**result,"outcome":"conflict",
+                        "reason":"Existing record is still in review or published; open a new observation instead"}
         if evidence_pending and op.scheme_id:
             media_fields={f["field_id"] for f in FORMS[op.form_id]["fields"]
                           if f["type"] in ("photo","attachments")}
