@@ -119,6 +119,25 @@ export default function CoreWorkflowLab(){
     return response;
   });
  }
+ async function exportPublishedCsv(){
+  await perform('Export scoped published observations',async()=>{
+    if(who==='collector')throw new Error('Officer permission required');
+    const url=ROOT+'/forms/reports/published.csv?period_code='+encodeURIComponent(reportMonth);
+    const response=await fetch(url,{
+      cache:'no-store',headers:{'X-Nimis-Dev-Actor':DEMO[who].id},
+    });
+    if(!response.ok)throw new Error('Export denied: '+response.status);
+    const blob=await response.blob();
+    if(blob.size>10*1024*1024)throw new Error('Export too large for this test');
+    const href=URL.createObjectURL(blob);
+    try{
+      const anchor=document.createElement('a');
+      anchor.href=href;anchor.download='nimis-published-pilot-'+reportMonth+'.csv';
+      document.body.append(anchor);anchor.click();anchor.remove();
+    }finally{window.setTimeout(()=>URL.revokeObjectURL(href),1000)}
+    return {message:'Scoped published records exported (FICTIONAL TEST ONLY)'};
+  });
+ }
  async function loadPublishedForms(){
   await perform('Published field observations',async()=>{
     if(who==='collector')throw new Error('Officer permissions required');
@@ -219,6 +238,8 @@ export default function CoreWorkflowLab(){
     </label>
     <button className="reg-primary" disabled={busy} onClick={()=>void loadPublishedForms()}>
       <RefreshCw size={16}/> Load published observations</button>
+    <button className="ghost-btn" disabled={busy} onClick={()=>void exportPublishedCsv()}>
+      Export published test CSV</button>
    </div>
    {publishedFields&&<div>
     <p><strong>{publishedFields.record_count} scoped records</strong> · {publishedFields.data_status}
