@@ -542,3 +542,22 @@ def test_field_form_review_requires_approved_catalogue_and_delegated_technical_r
           "SELECT revision FROM nimis_stage.scheme WHERE scheme_id=%s",
           (scheme,),
         ).fetchone()[0]==1
+
+def test_collector_web_photo_upload_preflight_is_explicitly_allowlisted(client):
+    test_uuid=str(uuid4())
+    response=client.options(
+      f"/api/v1/stage/forms/evidence/{test_uuid}?scheme_id={test_uuid}",
+      headers={
+        "Origin":"http://127.0.0.1:5191",
+        "Access-Control-Request-Method":"PUT",
+        "Access-Control-Request-Headers":"content-type,x-content-sha256,x-nimis-dev-actor",
+      })
+    assert response.status_code==200,response.text
+    assert response.headers["access-control-allow-origin"]=="http://127.0.0.1:5191"
+    assert "PUT" in response.headers["access-control-allow-methods"]
+    assert "x-content-sha256" in response.headers["access-control-allow-headers"].lower()
+    untrusted=client.options(
+      f"/api/v1/stage/forms/evidence/{test_uuid}?scheme_id={test_uuid}",
+      headers={"Origin":"https://untrusted.invalid",
+               "Access-Control-Request-Method":"PUT"})
+    assert untrusted.headers.get("access-control-allow-origin") is None
