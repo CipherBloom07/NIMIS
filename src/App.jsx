@@ -180,13 +180,8 @@ function DashboardVisuals({records,totals,format}) {
 function ModulePage({id}) {
   const m=moduleDescriptions[id] || moduleDescriptions.reports;
   const storageKey=`nimis-module-${id}-v1`;
-  const initial=schemes.map((s,i)=>({
-    ref:s.id,schemeId:s.id,name:s.name,province:s.province,district:s.district,
-    category:id==='water'?'Dam / river source':id==='infrastructure'?'Conveyance system':id==='agronomy'?'Maize':id==='projects'?'Rehabilitation':id==='gis'?'Scheme location':'Scheme profile',
-    status:i===2?'Under review':i===4?'Attention required':'Verified',
-    detail:id==='water'?'Source observation pending verification':id==='infrastructure'?'Condition assessment recorded':id==='agronomy'?'2026/27 season sample record':id==='projects'?'Milestone progress requires update':id==='gis'?'Coordinates require field confirmation':'Master profile sample record',
-    updated:'—'
-  }));
+  // No synthetic 'Verified' operational records: begin with a blank local workspace.
+  const initial=[];
   const masterSchemes=useMemo(()=>{const base=schemes.map(s=>({id:s.id,name:s.name,province:s.province,district:s.district}));try{const saved=typeof window!=='undefined'?JSON.parse(window.localStorage.getItem('nimis-registry-v1')):null;return Array.isArray(saved)&&saved.length?saved.map(s=>({id:s.id,name:s.name,province:s.province,district:s.district})):base}catch{return base}} ,[]);
   const [records,setRecords]=useState(()=>{
     try{const saved=typeof window!=='undefined'?JSON.parse(window.localStorage.getItem(storageKey)):null;return Array.isArray(saved)?saved:initial}
@@ -257,9 +252,9 @@ function ModulePage({id}) {
     <ModuleInsights id={id} records={records}/>
     <section className="panel schemes-panel">
       <div className="panel-head"><div><h2>{recordTitle}</h2><p>{filtered.length} records displayed · linked to scheme references</p></div><div className="panel-actions"><button className="ghost-btn" onClick={exportCsv}><Download size={14}/> Export CSV</button><button className="reg-primary" onClick={openNew}>+ Add record</button></div></div>
-      <div className="reg-toolbar"><div className="reg-search"><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, scheme ID, district..."/></div><select value={status} onChange={e=>setStatus(e.target.value)}><option>All statuses</option>{['Draft','Submitted','Under review','Verified','Approved','Attention required'].map(s=><option key={s}>{s}</option>)}</select></div>
+      <div className="reg-toolbar"><div className="reg-search"><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, scheme ID, district..."/></div><select value={status} onChange={e=>setStatus(e.target.value)}><option>All statuses</option>{['Draft','Needs verification','For correction'].map(s=><option key={s}>{s}</option>)}</select></div>
       {filtered.length?<div className="table-wrap"><table><thead><tr><th>Record ID</th><th>Scheme ID</th><th>Scheme / record</th><th>Province / district</th><th>Category</th><th>Status</th><th>Record detail</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{filtered.map(r=><tr key={r.ref}><td>{r.ref}</td><td>{r.schemeId||'—'}</td><td><div className="scheme-name">{r.name}</div></td><td>{r.province}<small style={{display:'block',color:'#98a49c'}}>{r.district}</small></td><td>{r.category}</td><td><Status label={r.status}/></td><td>{r.detail}</td><td>{r.updated}</td><td><div className="reg-actions"><button aria-label="Edit record" title="Edit record" onClick={()=>openEdit(r)}><Pencil size={13}/></button><button aria-label="Delete record" title="Delete local record" onClick={()=>remove(r.ref)}><Trash2 size={13}/></button></div></td></tr>)}</tbody></table></div>:<div className="reg-empty">No matching records. Change the search or add a record.</div>}
-      <div className="reg-foot">Workflow readiness: Capture → Verify → Review → Technical approval → Publish. Approval permissions and shared database integration are not yet connected.</div>
+      <div className="reg-foot">Local drafts are not verified data. Approval and publication require the future shared backend and named, authenticated officers.</div>
     </section>
     {notice&&<div className="data-note" role="status">{notice}<button style={{marginLeft:'auto',border:0,background:'transparent',color:'inherit'}} onClick={()=>setNotice('')}>Dismiss</button></div>}
     {showForm&&<div className="reg-modal-back" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setShowForm(false)}}><section className="reg-modal" role="dialog" aria-modal="true" aria-labelledby="module-form-title"><div className="reg-modal-head"><div><h2 id="module-form-title">{editing?'Edit record':`Add ${formTitle.toLowerCase()}`}</h2><p>Enter a prototype record. It will be saved only in this browser.</p></div><button className="reg-close" onClick={()=>setShowForm(false)} aria-label="Close"><X size={17}/></button></div><form onSubmit={submit}><div className="reg-form-grid">
