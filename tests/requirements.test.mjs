@@ -45,3 +45,17 @@ test('historical briefing is clearly not current dashboard data',()=>{
   assert.match(source,/30 October 2026/);
   assert.match(source,/not live NIMIS reporting/);
 });
+
+test('reference dashboard appearance is imported and the sample toggle cannot write to registry',()=>{
+  const main=readFileSync('src/main.jsx','utf8');
+  const css=readFileSync('src/reference-fidelity.css','utf8');
+  const dashboard=readFileSync('src/ExecutiveOverview.jsx','utf8');
+  assert.match(main,/reference-fidelity\.css/);
+  assert.match(css,/\.app-shell\s+\.topbar/);
+  assert.match(css,/background:linear-gradient\(100deg,#005031/);
+  assert.match(css,/\.app-shell>\.sidebar/);
+  assert.match(dashboard,/PREVIEW_SCHEMES/);
+  assert.match(dashboard,/displayedRecords=preview\?PREVIEW_SCHEMES:records/);
+  assert.match(dashboard,/FICTIONAL LAYOUT PREVIEW/);
+  assert.doesNotMatch(dashboard,/localStorage\.setItem/);
+});
