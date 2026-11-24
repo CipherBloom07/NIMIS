@@ -340,3 +340,62 @@ def test_new_scheme_proposal_never_creates_master_record(client,env):
     assert r.json()["results"][0]["outcome"]=="accepted"
     with psycopg.connect(env) as conn:
         assert conn.execute("SELECT count(*) FROM nimis_stage.scheme WHERE scheme_name=%s",(name,)).fetchone()[0]==0
+
+def test_signed_identity_mode_never_accepts_fake_development_header(client,env,monkeypatch):
+    from server.core import oidc_identity
+    monkeypatch.setenv("NIMIS_STAGE_OIDC_ENABLED","1")
+    try:
+        # Without credentials, even an existing synthetic UUID must not work.
+        blocked=client.get("/api/v1/stage/me",headers=headers("admin"))
+        assert blocked.status_code==401,blocked.text
+
+        # Test identity verification is explicitly mocked; this does NOT
+        # claim that institutional token/JWKS integration is configured.
+        subject="test-issuer|"+uuid4().hex
+        with psycopg.connect(env) as conn:
+            conn.execute("UPDATE nimis_stage.actor SET oidc_subject=%s WHERE actor_id=%s",
+                         (subject,ACTORS["collector"]))
+        monkeypatch.setattr(oidc_identity,"verified_subject",lambda authorization:subject)
+        good=client.get("/api/v1/stage/me",
+                        headers={"Authorization":"Bearer signed-for-test"})
+        assert good.status_code==200,good.text
+        assert good.json()["role_code"]=="data_collector"
+
+        # The verified subject's DB role is immutable from client-supplied
+        # request headers and cannot be elevated to administrator.
+        forged=client.get("/api/v1/stage/me",headers={
+             **headers("admin"),"Authorization":"Bearer signed-for-test"})
+        assert forged.status_code==200,forged.text
+        assert forged.json()["role_code"]=="data_collector"
+        no_admin=client.post("/api/v1/stage/schemes",headers={
+             **headers("admin"),"Authorization":"Bearer signed-for-test"},json={
+              "scheme_code":"DEMO-"+uuid4().hex[:8],
+              "scheme_name":"Denied privilege elevation",
+              "province_code":"DEMO-P","district_code":"DEMO-D"})
+        assert no_admin.status_code==403,no_admin.text
+
+        with psycopg.connect(env) as conn:
+            conn.execute("UPDATE nimis_stage.actor SET is_active=false WHERE actor_id=%s",
+                         (ACTORS["collector"],))
+        deactivated=client.get("/api/v1/stage/me",
+                               headers={"Authorization":"Bearer signed-for-test"})
+        assert deactivated.status_code==403,deactivated.text
+    finally:
+        with psycopg.connect(env) as conn:
+            conn.execute("UPDATE nimis_stage.actor SET oidc_subject=NULL,is_active=true WHERE actor_id=%s",
+                         (ACTORS["collector"],))
+        monkeypatch.delenv("NIMIS_STAGE_OIDC_ENABLED",raising=False)
+
+
+def test_identity_provider_config_is_fail_closed(monkeypatch):
+    from server.core.oidc_identity import verified_subject
+    from fastapi import HTTPException
+    monkeypatch.delenv("NIMIS_OIDC_ISSUER",raising=False)
+    monkeypatch.delenv("NIMIS_OIDC_JWKS_URL",raising=False)
+    monkeypatch.delenv("NIMIS_OIDC_AUDIENCE",raising=False)
+    with pytest.raises(HTTPException) as missing:
+        verified_subject(None)
+    assert missing.value.status_code==401
+    with pytest.raises(HTTPException) as config:
+        verified_subject("Bearer a.b.c")
+    assert config.value.status_code==503
