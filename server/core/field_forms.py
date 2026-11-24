@@ -10,9 +10,10 @@ import json
 from datetime import datetime
 from pathlib import Path
 from uuid import UUID
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request, Response
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from server.core.app import actor, db, in_scope, need_role
 
@@ -373,3 +374,108 @@ def field_form_detail(event_id: UUID, user=Depends(actor)):
             "status":row["status"],"evidence_pending":row["evidence_pending"],
             "answers":row["payload"],"official":False,
             "note":"Proposed form fields are not approved or published."}
+
+
+class FieldReviewDecision(BaseModel):
+    model_config=ConfigDict(extra="forbid")
+    decision_id:UUID
+    action:Literal["VERIFY","RETURN","REVIEW","TECHNICAL_APPROVE","PUBLISH"]
+    reason:str=Field(default="",max_length=500)
+
+    @model_validator(mode="after")
+    def check_reason(self):
+        self.reason=self.reason.strip()
+        if self.action=="RETURN" and not self.reason:
+            raise ValueError("Returning a form requires a reason")
+        return self
+
+
+@router.post("/submissions/{event_id}/decisions")
+def decide_field_form(event_id:UUID,body:FieldReviewDecision,user=Depends(actor)):
+    """Server-owned, atomic review; unapproved/unmapped forms cannot publish."""
+    need_role(user,"district_officer","provincial_officer","admin")
+    with db() as conn:
+        row=conn.execute(
+            """SELECT f.*,s.province_code,s.district_code FROM nimis_stage.field_form_submission f
+               LEFT JOIN nimis_stage.scheme s ON s.scheme_id=f.scheme_id
+               WHERE f.event_id=%s FOR UPDATE OF f""",(event_id,),
+        ).fetchone()
+        if not row:raise HTTPException(404,detail="Form submission not found")
+        if row["scheme_id"] is None:
+            # A request for a new scheme is not a registered master record.
+            raise HTTPException(409,detail="Unregistered proposed schemes require separate deduplication")
+        if not in_scope(user,row["province_code"],row["district_code"]):
+            raise HTTPException(403,detail="Outside the officer's authorized geography")
+        if user["actor_id"]==row["collector_id"]:
+            raise HTTPException(403,detail="Officers cannot review their own submissions")
+        existing=conn.execute(
+            "SELECT * FROM nimis_stage.field_form_decision WHERE decision_id=%s",
+            (body.decision_id,),
+        ).fetchone()
+        if existing:
+            if (existing["submission_event_id"]==event_id and
+                existing["actor_id"]==user["actor_id"] and
+                existing["action"]==body.action and
+                (existing["reason"] or "")==body.reason):
+                return {"outcome":"duplicate","event_id":str(event_id),
+                        "decision_id":str(body.decision_id),
+                        "status":existing["to_status"],"official":False}
+            raise HTTPException(409,detail="Decision UUID reused with different content")
+        status=row["status"]
+        transitions={
+            "VERIFY":("AWAITING_FORM_APPROVAL","DISTRICT_VERIFIED","district_officer"),
+            "REVIEW":("DISTRICT_VERIFIED","PROVINCIAL_REVIEWED","provincial_officer"),
+            "TECHNICAL_APPROVE":("PROVINCIAL_REVIEWED","TECHNICAL_APPROVED","admin"),
+            "PUBLISH":("TECHNICAL_APPROVED","PUBLISHED","admin"),
+        }
+        if body.action=="RETURN":
+            allowed={"AWAITING_FORM_APPROVAL":"district_officer",
+                     "DISTRICT_VERIFIED":"provincial_officer"}
+            needed=allowed.get(status)
+            if not needed:raise HTTPException(409,detail="Return not allowed at this stage")
+            to_status="RETURNED"
+        else:
+            expected,to_status,needed=transitions[body.action]
+            if status!=expected:raise HTTPException(409,detail="Incorrect review stage")
+        need_role(user,needed)
+        if body.action in ("VERIFY","PUBLISH"):
+            approved=conn.execute(
+                """SELECT reporting_mapping_approved
+                   FROM nimis_stage.approved_field_form
+                   WHERE form_id=%s AND form_version=%s""",
+                (row["form_id"],row["form_version"]),
+            ).fetchone()
+            if not approved:
+                raise HTTPException(409,detail="Institutional form version has not been approved")
+            if body.action=="PUBLISH" and not approved["reporting_mapping_approved"]:
+                raise HTTPException(409,detail="Reporting mapping is not approved")
+        if body.action=="VERIFY" and row["evidence_pending"]:
+            raise HTTPException(409,detail="Photo evidence remains incomplete")
+        if body.action=="TECHNICAL_APPROVE":
+            delegated=conn.execute(
+                """SELECT 1 FROM nimis_stage.actor_permission
+                   WHERE actor_id=%s AND permission_code='NATIONAL_TECHNICAL_APPROVE'
+                     AND revoked_at IS NULL""",(user["actor_id"],),
+            ).fetchone()
+            if not delegated:
+                raise HTTPException(403,detail="National technical delegation required")
+        conn.execute(
+            "UPDATE nimis_stage.field_form_submission SET status=%s WHERE event_id=%s",
+            (to_status,event_id),
+        )
+        conn.execute(
+            """INSERT INTO nimis_stage.field_form_decision
+               (decision_id,submission_event_id,actor_id,action,from_status,to_status,reason)
+               VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+            (body.decision_id,event_id,user["actor_id"],body.action,status,to_status,
+             body.reason or None),
+        )
+        conn.execute(
+            """INSERT INTO nimis_stage.audit(actor_id,event_type,entity_type,entity_id,details)
+               VALUES (%s,'FIELD_FORM_DECISION','field_form',%s,%s::jsonb)""",
+            (user["actor_id"],event_id,json.dumps({"action":body.action,
+                "from_status":status,"to_status":to_status})),
+        )
+    return {"outcome":"accepted","event_id":str(event_id),
+            "decision_id":str(body.decision_id),"status":to_status,
+            "official":False}
