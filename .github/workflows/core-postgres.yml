@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, feat/nimis-core-transactional-backend, feat/collector-field-form-staging-contract, feat/official-readiness-identity-v1]
   push:
-    branches: [main, feat/nimis-core-transactional-backend]
+    branches: [main, feat/nimis-core-transactional-backend, feat/official-readiness-identity-v1]
 
 jobs:
   postgres_core:
