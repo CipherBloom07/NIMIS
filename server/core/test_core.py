@@ -8,7 +8,7 @@ import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
-SCHEMA = Path(__file__).resolve().parents[1] / "schema.sql"
+SCHEMA = Path(__file__).resolve().parent / "schema.sql"
 ACTORS = {
  "admin":"00000000-0000-4000-8000-000000000001",
  "province":"00000000-0000-4000-8000-000000000002",
