@@ -643,3 +643,36 @@ def test_published_reporting_rejects_mixed_currencies_and_nonadditive_fields():
     assert _metrics("water_availability",{"storage_percent":"34.2"})==[
       {"field":"storage_percent","value":"34.2","unit":"percent"}]
     assert "new_scheme_request" not in MODULES
+
+
+def test_collector_receipt_status_returns_actual_officer_reason_without_geographic_leak(client):
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+      headers=headers("district"),json={"collector_id":ACTORS["collector"]}).status_code==200
+    now=datetime.now(timezone.utc).isoformat()
+    event=str(uuid4())
+    body={"event_id":event,"record_id":str(uuid4()),"revision":1,
+          "device_id":str(uuid4()),"scheme_id":scheme,"form_id":"risk_register",
+          "form_version":1,"period_code":"2026-11","captured_at":now,
+          "observed_at":now,"source":"Fictional risk assessment",
+          "base_scheme_revision":1,
+          "answers":{"risk_description":"Synthetic power outage","severity":"High"}}
+    submitted=client.post("/api/v1/stage/forms/sync/push",
+      headers=headers("collector"),json={"operations":[body]})
+    assert submitted.status_code==200,submitted.text
+    assert submitted.json()["results"][0]["outcome"]=="accepted"
+    endpoint=f"/api/v1/stage/forms/sync/status/{event}"
+    owner=client.get(endpoint,headers=headers("collector"))
+    assert owner.status_code==200,owner.text
+    assert owner.json()["status"]=="AWAITING_FORM_APPROVAL"
+    assert client.get(endpoint,headers=headers("other_district")).status_code==404
+    returned=client.post(f"/api/v1/stage/forms/submissions/{event}/decisions",
+      headers=headers("district"),json={
+        "decision_id":str(uuid4()),"action":"RETURN",
+        "reason":"Please recheck site observation"})
+    assert returned.status_code==200,returned.text
+    fresh=client.get(endpoint,headers=headers("collector"))
+    assert fresh.status_code==200,fresh.text
+    assert fresh.json()["status"]=="RETURNED"
+    assert fresh.json()["decisions"][-1]["reason"]=="Please recheck site observation"
+    assert fresh.json()["official"] is False
