@@ -46,7 +46,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .app-shell>.sidebar .user-info strong{color:#194c34!important;font-size:13px!important}
 .app-shell>.sidebar .user-info span{font-size:11px!important;color:#5c7969!important}
 .app-shell>.sidebar .sidebar-footer{padding:12px 5px 0!important;color:#66816e!important;font-size:11px!important;line-height:1.5!important}
-.app-shell>.main-area{margin-left:268px!important;min-width:0}
+.app-shell>.main-area{margin-left:268px!important;width:calc(100% - 268px)!important;min-width:0}
 .app-shell .topbar{
   position:sticky!important;top:0!important;z-index:9!important;
   background:linear-gradient(110deg,#005034,#086940)!important;color:#fff!important;
@@ -141,7 +141,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .app-shell .data-management-page .reg-empty{font-size:13px!important}
 @media(max-width:1500px){
   .app-shell>.sidebar{width:242px!important;min-width:242px!important}
-  .app-shell>.main-area{margin-left:242px!important}
+  .app-shell>.main-area{margin-left:242px!important;width:calc(100% - 242px)!important}
   .app-shell .topbar .breadcrumb{display:none!important}
   .app-shell .topbar .searchbox{width:195px!important}
   .app-shell .overview-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
@@ -149,7 +149,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media(max-width:1080px){
   .app-shell>.sidebar{width:242px!important;min-width:242px!important;transform:translateX(-100%)!important;z-index:20!important}
   .app-shell>.sidebar.open{transform:translateX(0)!important}
-  .app-shell>.main-area{margin-left:0!important}
+  .app-shell>.main-area{margin-left:0!important;width:100%!important}
   .app-shell .mobile-menu{display:grid!important;flex:none}
   .app-shell .topbar .ministry-brand{flex:1 1 auto!important}
   .app-shell .topbar .top-actions{gap:8px!important}
