@@ -134,6 +134,15 @@ def test_submission_idempotency_and_full_workflow(client):
     published=decision("admin","PUBLISH")
     assert published.status_code==200,published.text
     assert published.json()["status"]=="PUBLISHED"
+    report=client.get("/api/v1/stage/report/area?period_code=2026-11",headers=headers("province"))
+    assert report.status_code==200,report.text
+    assert report.json()["official"] is False
+    assert report.json()["data_status"]=="PUBLISHED_DEMO_ONLY"
+    assert report.json()["total_hectares"]["functional_area_ha"]=="12.50"
+    excluded=client.get("/api/v1/stage/report/area?period_code=2026-11",headers=headers("other_district"))
+    assert excluded.status_code==200
+    assert excluded.json()["schemes_reporting"]==0
+    assert client.get("/api/v1/stage/report/area?period_code=2026-11",headers=headers("collector")).status_code==403
     assert decision("district","VERIFY").status_code==409
 
 def test_optimistic_lock_prevents_two_writers_overwriting(client):
