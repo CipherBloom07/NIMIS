@@ -14,14 +14,20 @@ BEGIN
 END
 $demo$;
 
--- Only the synthetic test form versions, never an institutional catalogue.
+-- All 10 registered-scheme test forms; new_scheme_request requires separate master registration. Never institutional approval.
 INSERT INTO nimis_stage.approved_field_form
  (form_id,form_version,approved_by,reporting_mapping_approved)
 VALUES
  ('water_availability',1,'00000000-0000-4000-8000-000000000001',true),
  ('operational_status',1,'00000000-0000-4000-8000-000000000001',true),
  ('seasonal_production',1,'00000000-0000-4000-8000-000000000001',true),
- ('energy_power',1,'00000000-0000-4000-8000-000000000001',true)
+ ('energy_power',1,'00000000-0000-4000-8000-000000000001',true),
+ ('baseline',1,'00000000-0000-4000-8000-000000000001',true),
+ ('infrastructure_incident',1,'00000000-0000-4000-8000-000000000001',true),
+ ('om_finance',1,'00000000-0000-4000-8000-000000000001',true),
+ ('project_update',1,'00000000-0000-4000-8000-000000000001',true),
+ ('risk_register',1,'00000000-0000-4000-8000-000000000001',true),
+ ('farmer_plot',1,'00000000-0000-4000-8000-000000000001',true)
 ON CONFLICT(form_id,form_version)
 DO UPDATE SET approved_by=EXCLUDED.approved_by,
               reporting_mapping_approved=true
