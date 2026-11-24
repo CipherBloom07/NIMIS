@@ -32,8 +32,8 @@ app.add_middleware(
         "http://127.0.0.1:8081", "http://localhost:8081",
     ],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PATCH"],
-    allow_headers=["X-Nimis-Dev-Actor", "Content-Type", "Authorization"],
+    allow_methods=["GET", "POST", "PATCH", "PUT"],
+    allow_headers=["X-Nimis-Dev-Actor", "Content-Type", "Authorization", "X-Content-SHA256"],
 )
 
 
