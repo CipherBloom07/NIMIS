@@ -29,3 +29,45 @@ export async function loadAuthorizedDistrictSubmissions(accessToken) {
   }
   return data.items;
 }
+
+
+/**
+ * Staging-only: send an official-account district officer's decision to the
+ * server. Never use fictional demo tokens and never mutate browser registry.
+ * The caller must obtain the access token from approved institutional login.
+ */
+export async function submitAuthorizedDistrictDecision({
+  eventId, decisionId, action, reason = '', accessToken,
+}) {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuid.test(eventId) || !uuid.test(decisionId)) {
+    throw new Error('Server event ID and retry-stable decision UUID required');
+  }
+  if (!['VERIFY', 'RETURN'].includes(action)) {
+    throw new Error('Unsupported district decision');
+  }
+  if (action === 'RETURN' && !reason.trim()) {
+    throw new Error('Return reason required');
+  }
+  if (!accessToken || accessToken.length > 8192) {
+    throw new Error('Signed-in district officer token required');
+  }
+  const response = await fetch(
+    '/api/v1/secure/district/submissions/' + encodeURIComponent(eventId) + '/decisions',
+    {
+      method: 'POST', cache: 'no-store',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision_id: decisionId, action, reason: reason.trim() }),
+    },
+  );
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error('District decision not confirmed (HTTP ' + response.status + ')');
+  }
+  if (result.event_id !== eventId || result.decision_id !== decisionId ||
+      !['accepted', 'duplicate'].includes(result.outcome) ||
+      !['VERIFIED', 'RETURNED'].includes(result.status)) {
+    throw new Error('Invalid district decision receipt; retain the original retry UUID');
+  }
+  return result;
+}
