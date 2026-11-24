@@ -1,0 +1,116 @@
+/* Balanced NIMIS scale – a normal desktop application, not miniaturised or oversized.
+   Final overrides after readable-ui.css; presentation only, no storage/API changes. */
+body{font-size:13px!important;line-height:1.4}
+.app-shell>.sidebar{width:224px!important;min-width:224px!important}
+.app-shell>.main-area{width:calc(100% - 224px)!important;margin-left:224px!important}
+.app-shell>.sidebar>.brand{height:65px!important;min-height:65px!important;padding:9px 11px!important;gap:8px!important}
+.app-shell>.sidebar .brand-mark{width:41px!important;height:44px!important;min-width:41px!important;min-height:44px!important;padding:3px!important}
+.app-shell>.sidebar .brand-text strong{font-size:18px!important}
+.app-shell>.sidebar .brand-text span{font-size:9px!important;line-height:1.2!important}
+.app-shell>.sidebar .nav-scroll{padding:12px 7px 8px!important}
+.app-shell>.sidebar .nav-group{margin-bottom:11px!important}
+.app-shell>.sidebar .nav-heading{font-size:10px!important;padding:4px 8px 6px!important}
+.app-shell>.sidebar .nav-item{font-size:12px!important;min-height:36px!important;padding:7px 9px!important;gap:8px!important;margin:2px 0!important;line-height:1.26!important}
+.app-shell>.sidebar .nav-item svg{width:16px!important;height:16px!important}
+.app-shell>.sidebar .sidebar-bottom{padding:8px!important}
+.app-shell>.sidebar .user-card{padding:8px!important}
+.app-shell>.sidebar .user-avatar{width:29px!important;height:29px!important;font-size:10px!important}
+.app-shell>.sidebar .user-info strong{font-size:12px!important}
+.app-shell>.sidebar .user-info span,.app-shell>.sidebar .sidebar-footer{font-size:10px!important}
+.app-shell .topbar{min-height:62px!important;padding:8px 15px!important;gap:12px!important}
+.app-shell .topbar .ministry-brand strong{font-size:12px!important}
+.app-shell .topbar .ministry-brand span{font-size:10px!important}
+.app-shell .topbar .breadcrumb,.app-shell .topbar .breadcrumb strong,.app-shell .topbar .breadcrumb span{font-size:11px!important}
+.app-shell .topbar .connection-status{font-size:11px!important;padding:6px 9px!important}
+.app-shell .topbar .searchbox{height:34px!important;width:215px!important}
+.app-shell .topbar .searchbox input{font-size:12px!important}
+.app-shell .topbar .icon-btn{width:30px!important;height:30px!important}
+.app-shell .topbar .top-user{font-size:11px!important}
+.app-shell .topbar .user-avatar.small{width:28px!important;height:28px!important}
+.app-shell .content-wrap{padding:18px 20px!important}
+.app-shell .content-inner{max-width:1600px!important}
+.app-shell .welcome-row{margin-bottom:12px!important}
+.app-shell .welcome-row h1{font-size:clamp(19px,1.6vw,23px)!important}
+.app-shell .welcome-row .eyebrow{font-size:10px!important;margin-bottom:3px!important}
+.app-shell .welcome-row .subtitle{font-size:12px!important;margin-top:4px!important}
+.app-shell .panel,.app-shell .kpi-card,.app-shell .status-kpi{border-radius:8px!important}
+.app-shell .panel-head{padding:12px 14px 10px!important}
+.app-shell .panel-head h2{font-size:14px!important}
+.app-shell .panel-head p{font-size:11px!important;margin-top:4px!important}
+.app-shell .module-page .panel{margin-bottom:12px!important}
+.app-shell .data-note{font-size:11px!important;padding:9px 12px!important;margin-bottom:12px!important;line-height:1.4!important}
+.app-shell .kpi-grid{gap:10px!important;margin-bottom:12px!important}
+.app-shell .kpi-card{padding:12px!important;min-height:96px!important}
+.app-shell .kpi-label{font-size:11px!important}
+.app-shell .kpi-value{font-size:21px!important}
+.app-shell .kpi-note{font-size:10px!important;margin-top:6px!important}
+.app-shell .kpi-icon{width:32px!important;height:32px!important}
+.app-shell .kpi-icon svg{width:18px!important;height:18px!important}
+.app-shell .overview-kpis{gap:10px!important}
+.app-shell .overview-metric{min-height:89px!important;padding:12px!important;gap:10px!important}
+.app-shell .overview-metric .metric-icon{width:34px!important;height:34px!important;flex-basis:34px!important}
+.app-shell .overview-metric .metric-icon svg{width:18px!important;height:18px!important}
+.app-shell .overview-metric .metric-body span{font-size:11px!important}
+.app-shell .overview-metric .metric-body strong{font-size:20px!important}
+.app-shell .overview-metric .metric-body small{font-size:10px!important}
+.app-shell .overview-kpis-secondary .overview-metric{min-height:77px!important}
+.app-shell .overview-main-grid,.app-shell .overview-lower-grid{gap:12px!important}
+.app-shell .overview-chart{min-height:270px!important}
+.app-shell .overview-bars{padding:13px 15px!important;gap:11px!important}
+.app-shell .overview-bar-head{font-size:11px!important}
+.app-shell .overview-status-layout{min-height:200px!important;gap:14px!important}
+.app-shell .overview-circle{width:138px!important;height:138px!important;flex-basis:138px!important}
+.app-shell .overview-circle>div{width:93px!important;height:93px!important}
+.app-shell .overview-circle strong{font-size:21px!important}
+.app-shell .overview-legend>div{font-size:11px!important}
+.app-shell .overview-source{font-size:11px!important;padding:8px 11px!important;margin-bottom:3px!important}
+.app-shell .overview-source button,.app-shell .overview-preview-toggle,.app-shell .overview-filters select,.app-shell .overview-period{font-size:11px!important}
+.app-shell .overview-table-controls{padding:0 13px 10px!important}
+.app-shell .overview-table-controls input{font-size:12px!important;min-height:34px!important}
+.app-shell .overview-table-controls span,.app-shell .overview-status{font-size:11px!important}
+.app-shell .overview-quick>button{font-size:12px!important;padding:11px 13px!important}
+.app-shell .overview-quick-foot{font-size:11px!important;padding:12px!important}
+.app-shell table{font-size:12px!important;min-width:620px}
+.app-shell table thead th{font-size:11px!important;padding:10px 12px!important}
+.app-shell table tbody td{font-size:12px!important;padding:11px 12px!important;line-height:1.4!important}
+.app-shell .reg-primary,.app-shell .ghost-btn,.app-shell .primary-btn{font-size:12px!important;min-height:34px!important;padding:8px 12px!important;border-radius:6px!important}
+.app-shell .report-select{font-size:12px!important}
+.app-shell .report-definition{padding:15px!important}
+.app-shell .report-definition h2{font-size:16px!important}
+.app-shell .reg-field span{font-size:12px!important}
+.app-shell .reg-field input,.app-shell .reg-field select,.app-shell .reg-search input,.app-shell .reg-toolbar select{font-size:12px!important;min-height:35px!important}
+.app-shell .reg-foot,.app-shell .page-footer{font-size:11px!important}
+.app-shell .assessment-tabs button{font-size:11px!important;min-height:36px!important}
+.app-shell .assessment-fields h3{font-size:16px!important}
+.app-shell .assessment-progress,.app-shell .assessment-validation{font-size:12px!important}
+.app-shell .assessment-items button strong{font-size:12px!important}
+.app-shell .assessment-items button span,.app-shell .assessment-items button small{font-size:11px!important}
+@media(max-width:1500px) and (min-width:1081px){
+ .app-shell>.sidebar{width:215px!important;min-width:215px!important}
+ .app-shell>.main-area{margin-left:215px!important;width:calc(100% - 215px)!important}
+ .app-shell .overview-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+ .app-shell .topbar .searchbox{width:170px!important}
+}
+@media(max-width:1280px) and (min-width:1081px){
+ .app-shell .overview-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .app-shell .topbar .breadcrumb{display:none!important}
+}
+@media(max-width:1080px){
+ .app-shell>.sidebar{width:238px!important;min-width:238px!important;transform:translateX(-100%)!important}
+ .app-shell>.sidebar.open{transform:translateX(0)!important}
+ .app-shell>.main-area{margin-left:0!important;width:100%!important}
+ .app-shell .topbar .searchbox{width:180px!important}
+}
+@media(max-width:700px){
+ .app-shell .topbar{min-height:58px!important;padding:8px 11px!important}
+ .app-shell .content-wrap{padding:13px 11px!important}
+ .app-shell .welcome-row h1{font-size:20px!important}
+ .app-shell .overview-kpis,.app-shell .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+ .app-shell .overview-metric{min-height:82px!important;padding:9px!important}
+ .app-shell .overview-metric .metric-body span{font-size:10px!important}
+ .app-shell .overview-metric .metric-body strong{font-size:18px!important}
+ .app-shell .overview-main-grid,.app-shell .overview-lower-grid{grid-template-columns:minmax(0,1fr)!important}
+}
+@media(max-width:420px){
+ .app-shell .overview-kpis,.app-shell .kpi-grid{grid-template-columns:1fr!important}
+}
