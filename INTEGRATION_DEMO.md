@@ -18,14 +18,14 @@ npm run dev -- --port 8081 --strictPort
 - In the main NIMIS app, choose **District Collector Inbox (Test)** → **Connect fictional district inbox**.
 - Verify or return the synthetic row; returning requires a reason.
 - Navigate to **Provincial Review (Test)** and review the district-verified synthetic row.
-- Navigate to **Admin Publication (Test)** and publish the provincially reviewed synthetic row to a **fictional-only** status.
+- Navigate to **Admin Publication (Test)** and perform national technical approval before publishing the provincially reviewed synthetic row to a **fictional-only** status.
 - Refresh to inspect the PostgreSQL-persisted state and decision history.
 
 The new pages and demo credentials are **development-only**. The existing Scheme Registry, Data Management browser sync queue, executive dashboard and sample metrics are unchanged. The fictional review does **not** publish or verify actual Ministry records.
 
 ## Important limitations
 
-This demonstration does not implement a real officer login, encrypted devices, district/zone permissions, real offline survey outbox transfer, GPS/photograph upload, approval governance, or shared national PostgreSQL migrations. It is a first integration proof that the two codebases can exchange scoped test submissions via an API, with PostgreSQL as the data store.
+This demonstration does not implement a real officer login, encrypted devices, district/zone permissions, real offline survey outbox transfer, GPS/photograph upload, approval governance, or shared national PostgreSQL migrations. It is a first integration proof that the two codebases can exchange scoped test submissions via an API, with PostgreSQL as the data store. National technical approval is a separate demo action within the existing Admin role; the prototype does not provide separate national technical approver identities or enforce real-world separation of duties.
 
 The real system must use official NIMIS scheme IDs, approved backend credentials, auditable decisions, photo object storage and server-controlled workflows before accepting any real data.
 
