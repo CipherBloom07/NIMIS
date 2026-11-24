@@ -19,7 +19,7 @@ import psycopg
 from psycopg.rows import dict_row
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 app = FastAPI(title="NIMIS Core transactional development API", version="0.1.0")
 # Development-only browser integration, restricted to local NIMIS and Collector previews.
@@ -307,6 +307,40 @@ def submit(body:Submit,user=Depends(actor)):
     return {"event_id":str(body.event_id),"submission_id":str(body.submission_id),
             "outcome":"accepted","status":status,"record_revision":revision,
             "server_scheme_revision":scheme["revision"],"source":"ISOLATED_DEVELOPMENT"}
+
+class SyncPushBatch(BaseModel):
+    """Stage-only operational status sync envelope. Does not accept full baseline photos."""
+    operations: list[dict] = Field(min_length=1,max_length=25)
+
+@app.post("/api/v1/stage/sync/push")
+def push_batch(batch: SyncPushBatch, user=Depends(actor)):
+    """Per-item acknowledgements; one rejected operation cannot block the others.
+    This is a loopback development seam, not the Collector's production sync API.
+    The caller MUST retain any operation not acknowledged accepted/duplicate.
+    """
+    need_role(user,"data_collector","district_officer")
+    results=[]
+    for index,raw in enumerate(batch.operations):
+        event_id=raw.get("event_id") if isinstance(raw.get("event_id"),str) else None
+        try:
+            body=Submit.model_validate(raw)
+        except ValidationError as exc:
+            results.append({"index":index,"event_id":event_id,"outcome":"rejected",
+                            "reason":"FIELD_VALIDATION_FAILED",
+                            "field_errors":[{"field":".".join(str(p) for p in err["loc"]),
+                                             "message":err["msg"]} for err in exc.errors()]})
+            continue
+        try:
+            outcome=submit(body,user)
+            results.append({"index":index,**outcome})
+        except HTTPException as exc:
+            kind= "conflict" if exc.status_code==409 else "rejected"
+            results.append({"index":index,"event_id":str(body.event_id),
+                            "outcome":kind,"http_status":exc.status_code,
+                            "reason":exc.detail})
+    return {"source":"ISOLATED_DEVELOPMENT","official":False,
+            "results":results,"processed":len(results),
+            "note":"Do not clear local drafts or attachments; only individually acknowledged operations may be marked synced."}
 
 @app.get("/api/v1/stage/inbox")
 def inbox(user=Depends(actor)):
