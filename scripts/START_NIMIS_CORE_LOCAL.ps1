@@ -6,7 +6,8 @@ Never a Windows service and never exposed on public/LAN interfaces.
 [CmdletBinding()]
 param(
     [string]$CollectorProject = "C:\Users\2025\Desktop\DCA NIMIS",
-    [switch]$SetupOnly
+    [switch]$SetupOnly,
+    [switch]$SeedFictional
 )
 $ErrorActionPreference = 'Stop'
 $Project = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -58,6 +59,11 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'NIMIS_CORE_SCHEMA_APPLY_FAILED' }
     & $Psql -X -w -h 127.0.0.1 -p $Port -U postgres -d $DatabaseName -v ON_ERROR_STOP=1 -v "app_password=$AppPassword" -f (Join-Path $Project 'server\core\local_role.sql')
     if ($LASTEXITCODE -ne 0) { throw 'NIMIS_CORE_LOCAL_ROLE_SETUP_FAILED' }
+    if ($SeedFictional) {
+        & $Psql -X -w -h 127.0.0.1 -p $Port -U postgres -d $DatabaseName -v ON_ERROR_STOP=1 -f (Join-Path $Project 'server\core\demo_seed.sql')
+        if ($LASTEXITCODE -ne 0) { throw 'NIMIS_CORE_FICTIONAL_SEED_FAILED' }
+        Write-Host 'FICTIONAL_SCHEME_AND_ROLES: SEEDED' -ForegroundColor Green
+    }
 } finally {
     if ($null -ne $OriginalPassword) { $env:PGPASSWORD = $OriginalPassword }
     else { Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue }
