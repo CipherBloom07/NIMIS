@@ -623,6 +623,15 @@ def test_published_form_reporting_requires_approved_mapping_and_officer_chain(cl
     row=next(x for x in published.json()["items"] if x["event_id"]==event)
     assert row["module"]=="water_resources"
     assert row["scheme_id"]==scheme
+    first_page=client.get(report_url+"&limit=1&offset=0",headers=headers("district"))
+    assert first_page.status_code==200,first_page.text
+    assert len(first_page.json()["items"])==1
+    assert first_page.json()["page_limit"]==1
+    beyond=client.get(report_url+"&limit=1&offset=100",headers=headers("district"))
+    assert beyond.status_code==200,beyond.text
+    assert beyond.json()["items"]==[]
+    assert client.get(report_url+"&limit=501",headers=headers("district")).status_code==422
+    assert client.get(report_url+"&offset=-1",headers=headers("district")).status_code==422
     assert row["status"]=="PUBLISHED"
     assert row["metrics"]==[
       {"field":"water_level","value":"3.20","unit":"m"},
