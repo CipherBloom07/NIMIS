@@ -728,3 +728,58 @@ def test_windows_core_launcher_has_complete_admin_password_matcher():
     source=(Path(__file__).resolve().parents[2] / "scripts" / "START_NIMIS_CORE_LOCAL.ps1").read_text(encoding="utf-8")
     assert "'^NIMIS_PG_ADMIN_PASSWORD=[a-fA-F0-9]{64}$' }" in source
     assert "COLLECT_LOCAL_POSTGRESQL_ADMIN_PASSWORD_NOT_FOUND" in source
+
+
+def test_returned_form_correction_preserves_lineage_and_blocks_unapproved_overwrite(client,env):
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+      headers=headers("district"),json={"collector_id":ACTORS["collector"]}).status_code==200
+    now=datetime.now(timezone.utc).isoformat()
+    record=str(uuid4())
+    first_event=str(uuid4())
+    body={"event_id":first_event,"record_id":record,"revision":1,
+          "device_id":str(uuid4()),"scheme_id":scheme,"form_id":"water_availability",
+          "form_version":1,"period_code":"2026-11","captured_at":now,
+          "observed_at":now,"source":"Fictional meter reading",
+          "base_scheme_revision":1,"answers":{"water_level":"2.1"}}
+    url="/api/v1/stage/forms/sync/push"
+    def send(item):
+        res=client.post(url,headers=headers("collector"),json={"operations":[item]})
+        assert res.status_code==200,res.text
+        return res.json()["results"][0]
+    first=send(body)
+    assert first["outcome"]=="accepted"
+    assert send(body)["outcome"]=="duplicate"
+    in_review={**body,"event_id":str(uuid4()),"revision":2,
+               "answers":{"water_level":"2.5"}}
+    assert send(in_review)["outcome"]=="conflict"
+    returned=client.post(
+      f"/api/v1/stage/forms/submissions/{first_event}/decisions",
+      headers=headers("district"),json={
+        "decision_id":str(uuid4()),"action":"RETURN",
+        "reason":"Recheck the meter calibration"})
+    assert returned.status_code==200,returned.text
+    correction={**in_review,"event_id":str(uuid4())}
+    accepted=send(correction)
+    assert accepted["outcome"]=="accepted"
+    assert accepted["status"]=="AWAITING_FORM_APPROVAL"
+    assert send(correction)["outcome"]=="duplicate"
+    forged={**correction,"event_id":str(uuid4()),"revision":3,
+            "form_id":"energy_power","answers":{"outage_hours":"3"}}
+    assert send(forged)["outcome"]=="rejected"
+    competing={**correction,"event_id":str(uuid4()),"revision":3,
+               "answers":{"water_level":"2.6"}}
+    assert send(competing)["outcome"]=="conflict"
+    with psycopg.connect(env) as conn:
+        rows=conn.execute(
+          """SELECT revision,status,payload->>'water_level' AS level
+             FROM nimis_stage.field_form_submission
+             WHERE record_id=%s ORDER BY revision""",(record,),
+        ).fetchall()
+        assert [(x["revision"],x["status"],x["level"]) for x in rows]==[
+          (1,"RETURNED","2.1"),(2,"AWAITING_FORM_APPROVAL","2.5")]
+        assert conn.execute(
+          "SELECT revision FROM nimis_stage.scheme WHERE scheme_id=%s",
+          (scheme,),
+        ).fetchone()[0]==1
+
