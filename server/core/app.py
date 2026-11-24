@@ -33,7 +33,7 @@ app.add_middleware(
     ],
     allow_credentials=False,
     allow_methods=["GET", "POST", "PATCH"],
-    allow_headers=["X-Nimis-Dev-Actor", "Content-Type"],
+    allow_headers=["X-Nimis-Dev-Actor", "Content-Type", "Authorization"],
 )
 
 
@@ -57,8 +57,22 @@ def db():
     except psycopg.OperationalError:
         raise HTTPException(503, detail="Local PostgreSQL unavailable") from None
 
-def actor(request: Request, x_nimis_dev_actor: str | None = Header(default=None)):
+def actor(request: Request, x_nimis_dev_actor: str | None = Header(default=None),
+          authorization: str | None = Header(default=None)):
     guarded(request)
+    if os.environ.get("NIMIS_STAGE_OIDC_ENABLED") == "1":
+        # External JWT is used ONLY as identity proof. Server-owned roles,
+        # activation and geography come from the actor table, not JWT claims.
+        from server.core.oidc_identity import verified_subject
+        subject=verified_subject(authorization)
+        with db() as conn:
+            row=conn.execute(
+                "SELECT * FROM nimis_stage.actor WHERE oidc_subject=%s AND is_active=true",
+                (subject,),
+            ).fetchone()
+        if row is None:
+            raise HTTPException(403,detail="Institutional account not provisioned")
+        return row
     if os.environ.get("NIMIS_STAGE_DEV_AUTH") != "1":
         raise HTTPException(503, detail="No approved identity provider configured")
     try:
