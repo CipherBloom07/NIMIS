@@ -31,6 +31,14 @@ CREATE TABLE IF NOT EXISTS nimis_stage.scheme (
  updated_at timestamptz NOT NULL DEFAULT now(),
  CHECK (functional_ha IS NULL OR equipped_ha IS NULL OR functional_ha<=equipped_ha)
 );
+-- External OIDC subject is provisioned only by authorized ICT administrators.
+-- The existing actor role/geographic assignments remain database-owned.
+ALTER TABLE nimis_stage.actor ADD COLUMN IF NOT EXISTS oidc_subject text;
+CREATE UNIQUE INDEX IF NOT EXISTS actor_oidc_subject_unique
+ ON nimis_stage.actor(oidc_subject) WHERE oidc_subject IS NOT NULL;
+ALTER TABLE nimis_stage.actor ADD CONSTRAINT actor_oidc_subject_nonempty
+ CHECK (oidc_subject IS NULL OR length(btrim(oidc_subject)) > 0);
+
 CREATE INDEX IF NOT EXISTS scheme_geography_idx ON nimis_stage.scheme(province_code,district_code);
 CREATE TABLE IF NOT EXISTS nimis_stage.assignment (
  scheme_id uuid NOT NULL REFERENCES nimis_stage.scheme(scheme_id),
