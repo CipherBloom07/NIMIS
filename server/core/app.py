@@ -125,6 +125,20 @@ class Submit(BaseModel):
     note: str = Field(default="",max_length=500)
     @model_validator(mode="after")
     def valid_measurements(self):
+        # Only the operational status form is implemented in this Stage 1 API.
+        # The other ten versioned form definitions require approved field mappings.
+        if self.form_id != "operational_status" or self.form_version != 1:
+            raise ValueError("Stage 1 currently accepts operational_status form version 1 only")
+        allowed = {"equipped_area_ha":"ha","developed_area_ha":"ha",
+                   "functional_area_ha":"ha","actually_irrigated_area_ha":"ha",
+                   "active_beneficiaries":"count"}
+        for item in self.measurements:
+            if allowed.get(item.name) != item.unit:
+                raise ValueError(f"Unknown measurement or invalid unit: {item.name}")
+        amounts = {item.name:item.value for item in self.measurements}
+        if ("functional_area_ha" in amounts and "equipped_area_ha" in amounts
+              and amounts["functional_area_ha"] > amounts["equipped_area_ha"]):
+            raise ValueError("Functional area cannot exceed equipped area")
         if self.captured_at.tzinfo is None or any(m.observed_at.tzinfo is None for m in self.measurements):
             raise ValueError("Capture and measurement times must include timezone")
         names=[m.name.casefold() for m in self.measurements]
