@@ -34,6 +34,10 @@ async def upload_field_evidence(
     data=await request.body()
     if not data or len(data)>524288:
         raise HTTPException(413,detail="Field photo must contain 1–524288 bytes")
+    if ((mime=="image/jpeg" and not data.startswith(bytes.fromhex("ffd8ff"))) or
+        (mime=="image/png" and not data.startswith(bytes.fromhex("89504e470d0a1a0a"))) or
+        (mime=="image/webp" and not (data.startswith(b"RIFF") and data[8:12]==b"WEBP"))):
+        raise HTTPException(422,detail="File content does not match declared image type")
     digest=hashlib.sha256(data).hexdigest()
     if not x_content_sha256 or x_content_sha256.lower()!=digest:
         raise HTTPException(422,detail="Photo checksum does not match")
@@ -226,6 +230,25 @@ def _one(op: FormOperation, user: dict):
                 return {**result, "outcome": "duplicate"}
             return {**result, "outcome": "conflict", "reason": "Record revision or event ID already used"}
 
+        if evidence_pending and op.scheme_id:
+            media_fields={f["field_id"] for f in FORMS[op.form_id]["fields"]
+                          if f["type"] in ("photo","attachments")}
+            raw_ids=[]
+            for key in media_fields & op.answers.keys():
+                value=op.answers[key]
+                raw_ids.extend(value if isinstance(value,list) else [value])
+            try:
+                ids=[UUID(str(photo_id)) for photo_id in raw_ids if photo_id]
+            except (ValueError, TypeError):
+                return {**result,"outcome":"rejected",
+                        "reason":"Evidence references must be valid photo UUIDs"}
+            if ids:
+                uploaded=conn.execute(
+                    """SELECT count(*) AS total FROM nimis_stage.field_attachment
+                       WHERE photo_id = ANY(%s::uuid[]) AND uploaded_by=%s AND scheme_id=%s""",
+                    (ids,user["actor_id"],op.scheme_id),
+                ).fetchone()["total"]
+                evidence_pending = uploaded != len(set(ids))
         state = ("SCHEME_REVISION_CONFLICT"
                  if op.scheme_id and scheme["revision"] != op.base_scheme_revision else
                  "EVIDENCE_PENDING" if evidence_pending else "AWAITING_FORM_APPROVAL")
