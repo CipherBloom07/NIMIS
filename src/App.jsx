@@ -10,6 +10,7 @@ import SchemeAssessment from './SchemeAssessment.jsx';
 import HistoricalBriefing from './HistoricalBriefing.jsx';
 import ExecutiveOverview from './ExecutiveOverview.jsx';
 import CoreWorkflowLab from './CoreWorkflowLab.jsx';
+import PublishedFieldPreview from './PublishedFieldPreview.jsx';
 import {enqueueSyncChange,synchronizeIfConfigured,readSyncQueue} from './dataSync.js';
 import {
   LayoutDashboard, Map, Droplets, Wrench, Sprout, ClipboardList, Database, Upload,
@@ -296,13 +297,14 @@ function ReportsPage(){
     }catch(error){if(url)URL.revokeObjectURL(url);window.alert('The report catalogue could not be exported. Please try again.')}
   };
   return <div className="module-page">
-    <div className="welcome-row"><div><div className="eyebrow">MANAGEMENT / REPORTING</div><h1>Reports & Analytics</h1><p className="subtitle">A catalogue of reporting views planned for governed NIMIS information.</p></div><button className="ghost-btn" onClick={exportCatalogue}><Download size={14}/> Export catalogue</button></div>
-    <div className="data-note"><CircleHelp size={15}/><span><strong>Prototype report catalogue</strong> — these are report definitions only. No live national data, report-generation service or Power BI connection is configured.</span></div>
+    <div className="welcome-row"><div><div className="eyebrow">MANAGEMENT / REPORTING</div><h1>Reports & Analytics</h1><p className="subtitle">Review published field surveys received from the NIMIS Collector and inspect the planned reporting catalogue.</p></div><button className="ghost-btn" onClick={exportCatalogue}><Download size={14}/> Export catalogue</button></div>
+    <div className="data-note"><CircleHelp size={15}/><span><strong>Local connected reporting</strong> — published test field records are available below through the NIMIS Core API. Catalogue definitions are still provisional; official Power BI data is not configured.</span></div>
     <div className="kpi-grid module-kpis">
       <div className="kpi-card"><div className="kpi-label">Report definitions</div><div className="kpi-value">{reportTemplates.length}</div><div className="kpi-note">Prototype catalogue</div></div>
       <div className="kpi-card"><div className="kpi-label">Reporting cycles</div><div className="kpi-value">Monthly / quarterly</div><div className="kpi-note">Suggested frequencies</div></div>
-      <div className="kpi-card"><div className="kpi-label">Data publication</div><div className="kpi-value">Not connected</div><div className="kpi-note">Requires verified source records</div></div>
+      <div className="kpi-card"><div className="kpi-label">Data publication</div><div className="kpi-value">Core stage</div><div className="kpi-note">Published fictional field records below</div></div>
     </div>
+    {import.meta.env.DEV&&<PublishedFieldPreview/>}
     <section className="panel schemes-panel">
       <div className="panel-head"><div><h2>Available report definitions</h2><p>Select a definition to inspect its purpose and expected fields.</p></div></div>
       <div className="table-wrap"><table><thead><tr><th>Report</th><th>Category</th><th>Frequency</th><th>Definition</th></tr></thead><tbody>
