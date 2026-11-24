@@ -35,11 +35,13 @@ def env():
         conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA nimis_stage TO nimis_stage_demo")
         conn.execute("""GRANT INSERT ON nimis_stage.scheme,nimis_stage.assignment,
           nimis_stage.submission,nimis_stage.decision,nimis_stage.audit,
-          nimis_stage.field_form_submission,nimis_stage.field_attachment TO nimis_stage_demo""")
+          nimis_stage.field_form_submission,nimis_stage.field_attachment,nimis_stage.field_form_decision TO nimis_stage_demo""")
         conn.execute("""GRANT UPDATE(scheme_name,operational_status,equipped_ha,developed_ha,functional_ha,
              revision,updated_at) ON nimis_stage.scheme TO nimis_stage_demo""")
         conn.execute("GRANT UPDATE(revoked_at,assigned_by) ON nimis_stage.assignment TO nimis_stage_demo")
         conn.execute("GRANT UPDATE(status,latest_decision_at) ON nimis_stage.submission TO nimis_stage_demo")
+        conn.execute("GRANT SELECT ON nimis_stage.actor_permission,nimis_stage.approved_field_form TO nimis_stage_demo")
+        conn.execute("GRANT UPDATE(status) ON nimis_stage.field_form_submission TO nimis_stage_demo")
         conn.execute("GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA nimis_stage TO nimis_stage_demo")
         conn.execute("REVOKE CREATE ON SCHEMA nimis_stage FROM nimis_stage_demo")
     from urllib.parse import urlunparse
