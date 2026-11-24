@@ -149,6 +149,26 @@ export default function CoreWorkflowLab(){
     return {message:result.record_count+' published review-only records'};
   });
  }
+ async function loadMorePublishedForms(){
+  if(!publishedFields?.has_more||!Number.isInteger(publishedFields.next_offset))return;
+  await perform('Next reporting page',async()=>{
+    const offset=publishedFields.next_offset;
+    const next=await call('/forms/reports/published?period_code='+
+      encodeURIComponent(reportMonth)+'&offset='+offset+'&limit=100');
+    if(next.official!==false||next.data_status!=='PUBLISHED_DEMO_ONLY'||
+       next.offset!==offset||!Array.isArray(next.items)){
+      throw new Error('Invalid published reporting page');
+    }
+    const existing=new Set(publishedFields.items.map(row=>row.event_id));
+    setPublishedFields({
+      ...next,
+      items:[...publishedFields.items,...next.items.filter(row=>!existing.has(row.event_id))],
+      record_count:publishedFields.items.length+
+        next.items.filter(row=>!existing.has(row.event_id)).length,
+    });
+    return {message:'Additional published review-only records loaded'};
+  });
+ }
  async function loadReport(){
   await perform('Published area report',async()=>{
     const period=now().slice(0,7);
@@ -242,8 +262,10 @@ export default function CoreWorkflowLab(){
       Export published test CSV</button>
    </div>
    {publishedFields&&<div>
-    <p><strong>{publishedFields.record_count} scoped records</strong> · {publishedFields.data_status}
-       {publishedFields.has_more?' · Additional records require pagination':''}</p>
+    <p><strong>{publishedFields.items.length} scoped records loaded</strong> · {publishedFields.data_status}
+       {publishedFields.has_more?' · More records available':''}</p>
+    {publishedFields.has_more&&<button className="ghost-btn" disabled={busy}
+       onClick={()=>void loadMorePublishedForms()}>Load next reporting page</button>}
     <div className="table-wrap"><table><thead><tr><th>NIMIS Module</th><th>Scheme / district</th><th>Form / period</th><th>Verified values</th></tr></thead>
      <tbody>{publishedFields.items.map(row=><tr key={row.event_id}>
       <td>{row.module.replaceAll('_',' ')}</td><td>{row.scheme_name}<small style={{display:'block'}}>{row.district_code}</small></td>
