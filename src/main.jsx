@@ -5,7 +5,7 @@ import NimisErrorBoundary from './NimisErrorBoundary.jsx';
 import './design-tokens.css';
 import './styles.css';
 import './requirements-theme.css';
-import './reference-fidelity.css';
+import './readable-ui.css';
 
 if ('storage' in navigator && navigator.storage?.persist) {
   navigator.storage.persist().catch(() => false);
