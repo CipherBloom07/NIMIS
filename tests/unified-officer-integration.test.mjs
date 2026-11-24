@@ -28,7 +28,7 @@ test('district, province and admin only offer correct role/stage actions',()=>{
   assert.match(shared,/RETURN:'RETURNED'/);
   assert.match(shared,/decision_id:crypto\.randomUUID\(\)/);
   assert.match(shared,/A meaningful return reason is required/);
-  assert.match(shared,/role.*district/);
+  assert.match(shared,/district:\{id:/);
 });
 
 test('all ten registered-scheme forms may complete explicit fictional chain',()=>{
