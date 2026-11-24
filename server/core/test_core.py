@@ -469,3 +469,76 @@ def test_private_evidence_checksum_authorization_and_form_references(client,env)
                 headers=headers("collector"),json={"operations":[body2]})
     assert receipt2.status_code==200,receipt2.text
     assert receipt2.json()["results"][0]["status"]=="EVIDENCE_PENDING"
+
+
+def test_field_form_review_requires_approved_catalogue_and_delegated_technical_role(client,env):
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+      headers=headers("district"),json={"collector_id":ACTORS["collector"]}).status_code==200
+    now=datetime.now(timezone.utc).isoformat()
+    event_id=str(uuid4())
+    body={"event_id":event_id,"record_id":str(uuid4()),"revision":1,
+          "device_id":str(uuid4()),"scheme_id":scheme,
+          "form_id":"water_availability","form_version":1,
+          "period_code":"2026-11","captured_at":now,"observed_at":now,
+          "source":"Fictional field measurement","base_scheme_revision":1,
+          "answers":{"water_level":"2.8"}}
+    received=client.post("/api/v1/stage/forms/sync/push",
+        headers=headers("collector"),json={"operations":[body]})
+    assert received.status_code==200,received.text
+    assert received.json()["results"][0]["outcome"]=="accepted"
+    endpoint=f"/api/v1/stage/forms/submissions/{event_id}/decisions"
+    def decide(who,action,decision_id=None,reason=""):
+        return client.post(endpoint,headers=headers(who),json={
+            "decision_id":decision_id or str(uuid4()),"action":action,"reason":reason})
+    assert decide("district","VERIFY").status_code==409
+    with psycopg.connect(env) as conn:
+        conn.execute(
+          """INSERT INTO nimis_stage.approved_field_form
+             (form_id,form_version,approved_by)
+             VALUES ('water_availability',1,%s)
+             ON CONFLICT (form_id,form_version) DO NOTHING""",
+          (ACTORS["admin"],),
+        )
+    assert decide("collector","VERIFY").status_code==403
+    decision_id=str(uuid4())
+    verified=decide("district","VERIFY",decision_id)
+    assert verified.status_code==200,verified.text
+    assert verified.json()["status"]=="DISTRICT_VERIFIED"
+    assert decide("district","VERIFY",decision_id).json()["outcome"]=="duplicate"
+    assert decide("admin","PUBLISH").status_code==409
+    assert decide("province","REVIEW").json()["status"]=="PROVINCIAL_REVIEWED"
+    assert decide("admin","TECHNICAL_APPROVE").status_code==403
+    with psycopg.connect(env) as conn:
+        conn.execute(
+          """INSERT INTO nimis_stage.actor_permission
+             (actor_id,permission_code,granted_by)
+             VALUES (%s,'NATIONAL_TECHNICAL_APPROVE',%s)
+             ON CONFLICT (actor_id,permission_code)
+             DO UPDATE SET revoked_at=NULL""",
+          (ACTORS["admin"],ACTORS["admin"]),
+        )
+    technical=decide("admin","TECHNICAL_APPROVE")
+    assert technical.status_code==200,technical.text
+    assert technical.json()["status"]=="TECHNICAL_APPROVED"
+    assert decide("admin","PUBLISH").status_code==409
+    with psycopg.connect(env) as conn:
+        conn.execute(
+          """UPDATE nimis_stage.approved_field_form
+             SET reporting_mapping_approved=true
+             WHERE form_id='water_availability' AND form_version=1"""
+        )
+    approved=decide("admin","PUBLISH")
+    assert approved.status_code==200,approved.text
+    assert approved.json()["status"]=="PUBLISHED"
+    with psycopg.connect(env) as conn:
+        decisions=conn.execute(
+          "SELECT action FROM nimis_stage.field_form_decision WHERE submission_event_id=%s",
+          (event_id,),
+        ).fetchall()
+        assert len(decisions)==4
+        # Staged review must never directly overwrite master scheme.
+        assert conn.execute(
+          "SELECT revision FROM nimis_stage.scheme WHERE scheme_id=%s",
+          (scheme,),
+        ).fetchone()[0]==1
