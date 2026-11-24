@@ -17,9 +17,11 @@ npm run dev -- --port 8081 --strictPort
 - In NIMIS Collect, choose **Collector–District test** and send a fictional scheme observation.
 - In the main NIMIS app, choose **District Collector Inbox (Test)** → **Connect fictional district inbox**.
 - Verify or return the synthetic row; returning requires a reason.
-- Refresh to inspect server-persisted status.
+- Navigate to **Provincial Review (Test)** and review the district-verified synthetic row.
+- Navigate to **Admin Publication (Test)** and publish the provincially reviewed synthetic row to a **fictional-only** status.
+- Refresh to inspect the PostgreSQL-persisted state and decision history.
 
-The new page and demo credentials are **development-only**. The existing Scheme Registry, Data Management browser sync queue, executive dashboard and sample metrics are unchanged. The fictional review does **not** publish or verify actual Ministry records.
+The new pages and demo credentials are **development-only**. The existing Scheme Registry, Data Management browser sync queue, executive dashboard and sample metrics are unchanged. The fictional review does **not** publish or verify actual Ministry records.
 
 ## Important limitations
 
