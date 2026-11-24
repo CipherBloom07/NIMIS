@@ -210,7 +210,7 @@ def _validate(op: FormOperation):
             except (ValueError,TypeError):
                 raise ValueError("Expected a UUID: " + key)
         if typ=="date" and (not isinstance(value,str) or
-            not re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}",value)):
+            not re.fullmatch(r"\d{4}-\d{2}-\d{2}",value)):
             raise ValueError("Expected YYYY-MM-DD date: " + key)
     if op.scheme_id is None and op.form_id != "new_scheme_request":
         raise ValueError("An existing scheme needs a canonical UUID")
