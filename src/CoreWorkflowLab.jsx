@@ -15,6 +15,7 @@ export default function CoreWorkflowLab(){
  const [schemes,setSchemes]=useState([]);
  const [inbox,setInbox]=useState([]);
  const [fieldInbox,setFieldInbox]=useState([]);
+ const [selectedField,setSelectedField]=useState(null);
  const [report,setReport]=useState(null);
  const [schemeId,setSchemeId]=useState('00000000-0000-4000-8000-000000001000');
  const [note,setNote]=useState('Fictional scheme inspection — no real data');
@@ -47,6 +48,7 @@ export default function CoreWorkflowLab(){
     setSchemes(data.items||[]);
     const proposed=await call('/forms/inbox').catch(()=>({items:[]}));
     setFieldInbox(proposed.items||[]);
+    setSelectedField(null);
     if(who!=='collector'){
      const queue=await call('/inbox').catch(()=>({items:[]}));
      setInbox(queue.items||[]);
@@ -97,6 +99,13 @@ export default function CoreWorkflowLab(){
     const queue=await call('/inbox','GET',undefined,role);
     setInbox(queue.items||[]);
     return result;
+  });
+ }
+ async function inspectField(row){
+  await perform('Load scoped field answers',async()=>{
+   const result=await call('/forms/submissions/'+encodeURIComponent(row.event_id));
+   setSelectedField(result);
+   return {message:'Read unapproved '+result.form_id+' field record'};
   });
  }
  async function loadReport(){
@@ -160,9 +169,16 @@ export default function CoreWorkflowLab(){
     <div className="table-wrap"><table><thead><tr><th>Scheme</th><th>Dataset</th><th>Period</th><th>Review status</th></tr></thead>
     <tbody>{fieldInbox.map(row=><tr key={row.event_id}>
       <td>{row.scheme_name||'New scheme request'}</td><td>{row.form_id}</td>
-      <td>{row.period_code}</td><td>{row.status}{row.evidence_pending?' · Photos pending':''}</td>
+      <td>{row.period_code}</td><td>{row.status}{row.evidence_pending?' · Photos pending':''}
+        <button type="button" className="ghost-btn" disabled={busy} onClick={()=>void inspectField(row)}>Inspect test data</button></td>
     </tr>)}</tbody></table></div>
     {!fieldInbox.length&&<p style={{padding:18}}>No proposed form submissions visible to this test officer. Select Connect / Refresh.</p>}
+    {selectedField&&<div style={{padding:18}}>
+      <h3>Submitted test values — {selectedField.form_id}</h3>
+      <p>Scheme {selectedField.scheme_id||'new scheme request'} · {selectedField.period_code} · {selectedField.status}</p>
+      <pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',maxHeight:360,overflow:'auto'}}>{JSON.stringify(selectedField.answers,null,2)}</pre>
+      <p><strong>Development evidence only.</strong> Not reviewed, verified, approved or published.</p>
+    </div>}
   </section>
   {report&&<section className="panel" style={{padding:18}}><h2>Published-only area report — fictional data</h2>
     <p>Reporting period: {report.period_code} · {report.schemes_reporting} eligible schemes</p>
