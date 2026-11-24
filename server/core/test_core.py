@@ -61,10 +61,10 @@ def new_submission(scheme_id,revision=1):
     return {
       "submission_id":str(uuid4()),"event_id":str(uuid4()),
       "scheme_id":scheme_id,"device_id":str(uuid4()),
-      "form_id":"scheme_operational_status","form_version":1,
+      "form_id":"operational_status","form_version":1,
       "period_code":"2026-11","base_scheme_revision":revision,
       "captured_at":now,
-      "measurements":[{"name":"functional_area","value":"12.50",
+      "measurements":[{"name":"functional_area_ha","value":"12.50",
                        "unit":"ha","observed_at":now,"source":"Fictional field inspection"}],
       "note":"Synthetic baseline example; no real Ministry information."
     }
@@ -88,6 +88,17 @@ def test_geographic_scopes_and_collector_assignment(client):
                    headers=headers("district"),json={"collector_id":ACTORS["collector"]})
     assert ok.status_code==200,ok.text
     assert any(row["scheme_id"]==scheme for row in client.get("/api/v1/stage/schemes",headers=headers("collector")).json()["items"])
+
+def test_stage_rejects_unapproved_form_and_invalid_measurement_unit(client):
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+                        headers=headers("district"),json={"collector_id":ACTORS["collector"]}).status_code==200
+    body=new_submission(scheme)
+    r=client.post("/api/v1/stage/submissions",headers=headers("collector"),json={**body,"form_id":"farmer_plot"})
+    assert r.status_code==422
+    body["measurements"][0]["unit"]="litres"
+    r=client.post("/api/v1/stage/submissions",headers=headers("collector"),json=body)
+    assert r.status_code==422
 
 def test_submission_idempotency_and_full_workflow(client):
     scheme=new_scheme(client)
