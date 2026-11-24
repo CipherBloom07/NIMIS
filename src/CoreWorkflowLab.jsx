@@ -1,4 +1,4 @@
-import React,{useCallback,useState} from 'react';
+import React,{useCallback,useEffect,useState} from 'react';
 import {CheckCircle2,Database,RefreshCw,ShieldCheck,AlertTriangle,Send} from 'lucide-react';
 
 const ROOT='http://127.0.0.1:8775/api/v1/stage';
@@ -23,6 +23,9 @@ export default function CoreWorkflowLab(){
  const [note,setNote]=useState('Fictional scheme inspection — no real data');
  const [message,setMessage]=useState('Start the isolated PostgreSQL API, then use the controls below.');
  const [busy,setBusy]=useState(false);
+ const [liveStatus,setLiveStatus]=useState('Connecting to local NIMIS Core');
+ const [lastLiveSync,setLastLiveSync]=useState('');
+
 
  const call=useCallback(async(path,method='GET',body,role=who)=>{
   const response=await fetch(ROOT+path,{
@@ -35,6 +38,26 @@ export default function CoreWorkflowLab(){
   if(!response.ok)throw new Error((typeof payload.detail==='string'?payload.detail:JSON.stringify(payload.detail))||'API HTTP '+response.status);
   return payload;
  },[who]);
+
+ useEffect(()=>{
+   let active=true;
+   async function refreshLive(){
+     try{
+       const [health,queue]=await Promise.all([call('/health'),call('/forms/inbox')]);
+       if(!active)return;
+       if(health.mode!=='isolated-development'||health.production_ready!==false||
+          queue.source!=='ISOLATED_DEVELOPMENT')throw new Error('Wrong service identity');
+       setLiveStatus('Connected — staged field records received from Collector');
+       setLastLiveSync(new Date().toLocaleTimeString());
+       setFieldInbox(queue.items||[]);
+     }catch{
+       if(active)setLiveStatus('Local Core offline — changes are not confirmed');
+     }
+   }
+   void refreshLive();
+   const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void refreshLive()},12000);
+   return()=>{active=false;window.clearInterval(timer)};
+ },[call]);
 
  const perform=async(label,task)=>{
   setBusy(true);
@@ -191,6 +214,10 @@ export default function CoreWorkflowLab(){
     <h1>NIMIS Core — Operational Integration Lab</h1>
     <p className="subtitle">Test PostgreSQL concurrency, scheme assignments, submission workflow and published-only reporting.</p>
   </div></div>
+  <div role="status" className="panel" style={{padding:'12px 16px',marginBottom:12}}>
+    <strong>NIMIS Core bridge:</strong> {liveStatus} · Last successful refresh: {lastLiveSync||'none'}
+    <span style={{display:'block'}}>Collector submissions appear automatically in this District/Provincial review inbox when Core acknowledges them. All displayed results are fictional local tests.</span>
+  </div>
   <div className="data-note"><AlertTriangle size={18}/><span>
     <strong>FICTIONAL TEST ENVIRONMENT.</strong> These controls use a synthetic test identity on your own computer. They do not authenticate Ministry officers, collect real surveys, upload photos or publish official statistics. Never enter personal or real operational data here.
   </span></div>
