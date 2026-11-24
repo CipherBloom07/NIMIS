@@ -47,7 +47,7 @@ Expected: `CORE_HEALTH: PASS`, `DISTRICT_ASSIGNED_COLLECTOR: PASS`, `COLLECTOR_R
 
 ## Live presentation: what to click
 
-1. Collector > **Requirements Forms (Draft)**. In Main Core Workflow choose District persona; use the seeded scheme `DEMO-NIMIS-0001` (`Fictional Canal Scheme — Training Only`, `DEMO-P/DEMO-D`). It is already assigned to the fictional collector.
+1. Collector > **Requirements Forms (Draft)**. In Main Core Operations (Test) shows the seeded scheme `DEMO-NIMIS-0001` (`Fictional Canal Scheme — Training Only`, `DEMO-P/DEMO-D`). It is already assigned to the fictional collector.
 2. Collector should display **Connection to Main NIMIS: Connected** and one or more assigned schemes. Pick **Water Availability and Abstraction**.
 3. Reporting month: `2026-11`. Top-level source: `Synthetic NIMIS presentation`. Top-level observation date: `2026-11-24T09:00:00Z`.
 4. Manually type the following **fictional answers** (all numbers are invented):
@@ -65,10 +65,10 @@ Expected: `CORE_HEALTH: PASS`, `DISTRICT_ASSIGNED_COLLECTOR: PASS`, `COLLECTOR_R
 | source | Fictional gauge reading |
 
 5. **Save offline draft** → verify it appears under Saved local forms, then **Queue saved revision**. Turn the backend off or disconnect in DevTools to show that a pending event stays on the device. Restore the backend and click **Reconnect and sync queued forms**.
-6. Main > **Core Database Workflow (Test)**. With District persona, the new record appears in the automatically refreshed **Collected field forms** inbox with status `AWAITING_FORM_APPROVAL`.
+6. Main > **District Collector Inbox**. The new record appears automatically in the server-connected officer inbox with status `AWAITING_FORM_APPROVAL`.
 7. Option A: click **Return for correction**, type `Recheck water level`. Collector > **Refresh officer decisions** → **Correct returned form**, change 3.20 to 3.10, save a **new revision** and queue it. It returns to District for verification.
-8. District **VERIFY** → Provincial persona **REVIEW** → Admin **TECHNICAL APPROVE** → Admin **PUBLISH**. Refresh/allow the inbox to update after changing personas.
-9. Main > Executive Dashboard > **Connected field reporting — Development Test**. Set the same month, click **Read published test records**. The form should now appear under Water resources with units, scheme and district. Prior to PUBLISH it must not appear here.
+8. **District Collector Inbox: Verify form** → **Provincial Review: Approve provincial review** → **Admin Publication: Technical approval** → **Admin Publication: Publish**. Each page refreshes the same PostgreSQL records automatically.
+9. Main > **Reports & Analytics** (or Executive Dashboard) > **Connected field reporting — Development Test**. Set the same month, click **Read published test records**. The form should now appear under Water resources with units, scheme and district. Prior to PUBLISH it must not appear here.
 
 ### Additional negative controls to demonstrate
 
@@ -83,3 +83,12 @@ Expected: `CORE_HEALTH: PASS`, `DISTRICT_ASSIGNED_COLLECTOR: PASS`, `COLLECTOR_R
 This is a **local, same-machine integration pilot**, not a deployed system accessible to phones over the internet. The Collector is a mobile-responsive PWA, not a production-enrolled native Android application. Cross-device private HTTPS, Ministry OIDC/MFA, encrypted offline storage, approved data dictionary, production GIS/BI integration, backups, security assessment and Ministry authorization remain necessary before real field deployment.
 
 Do not claim that all legacy browser-local NIMIS dashboard modules read from PostgreSQL. The **Connected field reporting — Development Test** panel is the real server-backed integration proof.
+
+## Actual four NIMIS officer/reporting modules
+
+- **District Collector Inbox** uses Core `/api/v1/stage/forms/inbox` and verifies or returns saved Collector records.
+- **Provincial Review** reads the exact same Core records under the Provincial Officer scope, not the old :8765 service.
+- **Admin Publication** records a delegated technical approval and a final publication step in that same Core database.
+- **Reports & Analytics** and published observation panels in Water, Infrastructure & O&M, Agronomy and Project Implementation read the Core published-only API; they do not silently import mutable browser drafts.
+
+The web topbar now reports **Core connected** or **Core offline**, which is distinct from general internet connectivity. The Collector's **Save and send to District** action saves locally and attempts synchronization, showing a real receipt only when the Core confirms it. It retains unsent records offline for retry.
