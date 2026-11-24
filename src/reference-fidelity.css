@@ -207,3 +207,13 @@ html,body,#root{min-height:100%;background:var(--nimis-canvas)}
   .app-shell .overview-metric .metric-body strong{font-size:16px!important;white-space:normal!important}
   .app-shell .overview-source{flex-wrap:wrap}
 }
+
+/* On-demand fictional chart content for comparing layout against the supplied mockups. */
+.app-shell .overview-preview-toggle{
+  border:1px solid #7ebf9d;background:#ecf7ef;color:#086b42;
+  border-radius:5px;padding:7px 10px;font-size:9px;font-weight:900;
+  white-space:nowrap;cursor:pointer;
+}
+.app-shell .overview-preview-toggle:hover{background:#d8f1e2}
+.app-shell .overview-preview-toggle.active{background:#9f4f14;color:#fff;border-color:#9f4f14}
+@media(max-width:650px){.app-shell .overview-preview-toggle{padding:7px}}
