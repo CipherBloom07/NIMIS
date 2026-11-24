@@ -17,10 +17,24 @@ from uuid import UUID, uuid4
 
 import psycopg
 from psycopg.rows import dict_row
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, model_validator
 
 app = FastAPI(title="NIMIS Core transactional development API", version="0.1.0")
+# Development-only browser integration, restricted to local NIMIS and Collector previews.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:8110", "http://localhost:8110",
+        "http://127.0.0.1:5173", "http://localhost:5173",
+        "http://127.0.0.1:8081", "http://localhost:8081",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH"],
+    allow_headers=["X-Nimis-Dev-Actor", "Content-Type"],
+)
+
 
 def guarded(request: Request):
     if os.environ.get("NIMIS_STAGE_ENABLE") != "1":
@@ -324,3 +338,50 @@ def decide(submission_id:UUID,body:Decision,user=Depends(actor)):
              VALUES (%s,'WORKFLOW_DECISION','submission',%s,%s::jsonb)""",
              (user["actor_id"],submission_id,json.dumps({"action":body.action,"from":row["status"],"to":target})))
     return {"outcome":"accepted","status":target,"source":"ISOLATED_DEVELOPMENT"}
+
+@app.get("/api/v1/stage/report/area")
+def published_area_report(
+    period_code: str = Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+    user=Depends(actor),
+):
+    """Read only the latest published operational status per scheme and period.
+    A reporting warehouse is still required for national scale.
+    """
+    need_role(user,"admin","provincial_officer","district_officer")
+    clause,params=(
+        ("TRUE",()) if user["role_code"]=="admin" else
+        ("s.province_code=%s",(user["province_code"],))
+        if user["role_code"]=="provincial_officer" else
+        ("s.province_code=%s AND s.district_code=%s",(user["province_code"],user["district_code"]))
+    )
+    with db() as conn:
+        rows=conn.execute(f"""SELECT DISTINCT ON (sub.scheme_id)
+              sub.scheme_id,sub.payload,s.province_code,s.district_code,
+              sub.received_at FROM nimis_stage.submission sub
+              JOIN nimis_stage.scheme s USING(scheme_id)
+              WHERE sub.status='PUBLISHED' AND sub.form_id='operational_status'
+                AND sub.period_code=%s AND {clause}
+              ORDER BY sub.scheme_id,sub.received_at DESC,sub.submission_id DESC
+              LIMIT 500""",(period_code,*params)).fetchall()
+    total={"equipped_area_ha":Decimal(0),"developed_area_ha":Decimal(0),
+           "functional_area_ha":Decimal(0),"actually_irrigated_area_ha":Decimal(0)}
+    provinces={}
+    for row in rows:
+        province=row["province_code"]
+        target=provinces.setdefault(province,{k:Decimal(0) for k in total})
+        for item in row["payload"].get("measurements",[]):
+            key=item.get("name")
+            if key in total and item.get("unit")=="ha":
+                value=Decimal(str(item["value"]))
+                total[key]+=value
+                target[key]+=value
+    return {
+      "source":"ISOLATED_DEVELOPMENT","official":False,
+      "period_code":period_code,"schemes_reporting":len(rows),
+      "data_status":"PUBLISHED_DEMO_ONLY",
+      "total_hectares":{k:str(v) for k,v in total.items()},
+      "provinces":[{"province_code":p,
+                    **{k:str(v) for k,v in values.items()}}
+                   for p,values in sorted(provinces.items())],
+      "page_limited":len(rows)==500,
+    }
