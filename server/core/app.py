@@ -472,3 +472,7 @@ def published_area_report(
                    for p,values in sorted(provinces.items())],
       "page_limited":len(rows)==500,
     }
+
+# Review-only field form API: isolated stage service, never production publication.
+from server.core.field_forms import router as field_form_router
+app.include_router(field_form_router)
