@@ -723,3 +723,8 @@ def test_unapproved_structured_capture_is_schema_typed_and_areas_constrained():
     for values in broken:
         with pytest.raises(ValueError):
             _validate(FormOperation(**base,answers=values))
+
+def test_windows_core_launcher_has_complete_admin_password_matcher():
+    source=(Path(__file__).resolve().parents[2] / "scripts" / "START_NIMIS_CORE_LOCAL.ps1").read_text(encoding="utf-8")
+    assert "'^NIMIS_PG_ADMIN_PASSWORD=[a-fA-F0-9]{64}$' }" in source
+    assert "COLLECT_LOCAL_POSTGRESQL_ADMIN_PASSWORD_NOT_FOUND" in source
