@@ -694,3 +694,32 @@ def test_collector_receipt_status_returns_actual_officer_reason_without_geograph
     assert fresh.json()["status"]=="RETURNED"
     assert fresh.json()["decisions"][-1]["reason"]=="Please recheck site observation"
     assert fresh.json()["official"] is False
+
+def test_unapproved_structured_capture_is_schema_typed_and_areas_constrained():
+    from server.core.field_forms import FormOperation,_validate
+    now=datetime.now(timezone.utc)
+    base={
+      "event_id":uuid4(),"record_id":uuid4(),"revision":1,
+      "device_id":uuid4(),"scheme_id":uuid4(),"form_id":"baseline",
+      "form_version":1,"period_code":"2026-11",
+      "captured_at":now,"observed_at":now,"source":"Fictional survey",
+      "base_scheme_revision":1,
+    }
+    valid=FormOperation(**base,answers={
+      "officers":[{"reference":"officer-1"}],
+      "major_crops":["maize","wheat"],
+      "equipped_area_ha":"20","functional_area_ha":"17",
+      "water_management":{"allocation":"schedule"},
+    })
+    digest,evidence=_validate(valid)
+    assert len(digest)==64 and evidence is False
+    broken=[
+      {"officers":"not structured"},
+      {"major_crops":"maize,wheat"},
+      {"water_management":"plain text"},
+      {"functional_area_ha":"25","equipped_area_ha":"20"},
+      {"equipped_area_ha":"NaN"},
+    ]
+    for values in broken:
+        with pytest.raises(ValueError):
+            _validate(FormOperation(**base,answers=values))
