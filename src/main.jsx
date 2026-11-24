@@ -6,6 +6,7 @@ import './design-tokens.css';
 import './styles.css';
 import './requirements-theme.css';
 import './readable-ui.css';
+import './balanced-scale.css';
 
 if ('storage' in navigator && navigator.storage?.persist) {
   navigator.storage.persist().catch(() => false);
