@@ -1,0 +1,145 @@
+/* NIMIS 2026 visual fidelity layer — governed by the seven-screen GUI reference.
+   Formal government emerald navigation, crisp white cards, green active module,
+   compact operational KPIs and high contrast real text; no decorative emoji. */
+:root{
+  --nimis-reference-green:#006b43;
+  --nimis-reference-deep:#004a32;
+  --nimis-reference-pale:#e7f5ec;
+  --nimis-reference-surface:#f3f7f6;
+  --nimis-reference-text:#102e25;
+  --nimis-reference-border:#dbe8e2;
+}
+html{font-size:14px}
+body,.app-shell{background:var(--nimis-reference-surface);color:var(--nimis-reference-text)}
+.app-shell .sidebar{
+  background:#fff!important;
+  border-right:1px solid var(--nimis-reference-border)!important;
+  box-shadow:none!important;
+}
+.app-shell .brand{
+  background:var(--nimis-reference-deep)!important;
+  color:#fff!important;
+  min-height:74px;
+  display:flex;
+  align-items:center;
+  padding:10px 14px;
+}
+.app-shell .brand-text strong{font-weight:900;color:#fff!important;font-size:17px}
+.app-shell .brand-text span{color:#e6f7ee!important;font-size:10px;line-height:1.25;display:block}
+.app-shell .brand-mark{
+  min-height:45px;min-width:45px;width:45px;height:45px;
+  background:#fff!important;border:1px solid rgba(255,255,255,.68);
+  border-radius:6px!important;
+}
+.app-shell .brand-mark .official-logo-image{object-fit:contain;padding:3px}
+.app-shell .sidebar-divider{background:#e0ebe4}
+.app-shell .nav-group{margin-bottom:18px}
+.app-shell .nav-heading{
+  font-size:10px!important;color:#65776e!important;
+  font-weight:900;letter-spacing:.09em;padding-bottom:8px;
+}
+.app-shell .nav-item{
+  font-size:12px;font-weight:730;color:#3b544b;
+  border-radius:6px;min-height:39px;margin:3px 0;
+  padding:9px 11px;
+}
+.app-shell .nav-item:hover{background:#f0f7f3;color:#005a39}
+.app-shell .nav-item.active{
+  background:var(--nimis-reference-pale)!important;
+  box-shadow:inset 4px 0 0 #068a50!important;
+  color:#005938!important;font-weight:900;
+}
+.app-shell .nav-item.active svg{color:#057845!important}
+.app-shell .topbar{
+  background:var(--nimis-reference-deep)!important;
+  color:#fff!important;
+  border-bottom:2px solid #0a8a54;
+  min-height:62px;
+}
+.app-shell .topbar .ministry-brand strong,
+.app-shell .topbar .ministry-brand span,
+.app-shell .topbar .breadcrumb,
+.app-shell .topbar .breadcrumb strong,
+.app-shell .topbar .breadcrumb span{
+  color:#fff!important;
+}
+.app-shell .topbar .breadcrumb b{color:#b7e8ce}
+.app-shell .topbar .top-actions,
+.app-shell .topbar .icon-btn,
+.app-shell .topbar .top-user{color:#fff}
+.app-shell .topbar .searchbox input{color:#173c2b}
+.app-shell .content-wrap{background:var(--nimis-reference-surface)}
+.app-shell .content-inner{width:100%;max-width:1820px}
+.app-shell .welcome-row{align-items:center;gap:14px}
+.app-shell h1,.app-shell h2,.app-shell h3{
+  color:#0b442d;font-weight:850;letter-spacing:-.02em;
+}
+.app-shell h1{font-size:clamp(19px,1.55vw,25px);line-height:1.2}
+.app-shell .eyebrow{font-weight:900;color:#07824e;letter-spacing:.085em}
+.app-shell .subtitle{font-size:12px;color:#597467}
+.app-shell .panel,.app-shell .kpi-card,.app-shell .status-kpi{
+  background:#fff;border:1px solid var(--nimis-reference-border);
+  border-radius:10px;box-shadow:0 2px 8px rgba(11,65,39,.035);
+}
+.app-shell .panel-head h2{font-weight:900;font-size:14px;color:#064930}
+.app-shell .kpi-card{min-height:108px}
+.app-shell .kpi-value{font-weight:900;color:#086942;letter-spacing:-.03em}
+.app-shell .kpi-label{font-weight:800;color:#395e4c}
+.app-shell .kpi-note{color:#708677}
+.app-shell .kpi-icon.green{background:#dff6e8;color:#056c40}
+.app-shell .kpi-icon.blue{background:#e4f1ff;color:#225ca8}
+.app-shell .kpi-icon.gold{background:#fff1d6;color:#b76b12}
+.app-shell .reg-primary,.app-shell .primary-btn{
+  background:#08784a!important;border-color:#08784a!important;
+  color:#fff!important;font-weight:800;
+}
+.app-shell .reg-primary:hover,.app-shell .primary-btn:hover{background:#065e3c!important}
+.app-shell table thead th{
+  background:#f1f8f4;color:#17523b;font-weight:900;
+  border-bottom:1px solid #d9e9e0;
+}
+.app-shell table tbody td{border-bottom:1px solid #eef3f0}
+.app-shell table tbody tr:hover{background:#f8fcf9}
+.app-shell .status.green{background:#e8f8ee;color:#08754a}
+.app-shell .status.amber{background:#fff5de;color:#97610c}
+.app-shell .data-note{background:#f0f8f4;border-color:#b9dccb;color:#27523e}
+.app-shell .reg-modal{max-height:90dvh;overflow-y:auto}
+.app-shell .reg-field span{font-weight:800;color:#2e5943}
+.app-shell .reg-field input,.app-shell .reg-field select{background:#fff;border:1px solid #c9ddd1;border-radius:7px}
+.app-shell .reg-field input:focus,.app-shell .reg-field select:focus{
+  outline:2px solid #97d8b5;outline-offset:1px;
+}
+
+/* Questionnaire-aligned assessment: compact left entry, right completeness workspace. */
+.assessment-layout{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(250px,.9fr);gap:16px;align-items:start}
+.assessment-editor,.assessment-list{min-width:0;overflow:hidden}
+.assessment-editor .panel-head,.assessment-list .panel-head{padding:16px 18px}
+.assessment-progress{font-weight:900;font-size:12px;color:#08784a;background:#e5f6ec;padding:9px 11px;border-radius:6px}
+.assessment-select{padding:10px 18px;border-bottom:1px solid #e5ede8}
+.assessment-tabs{display:flex;gap:5px;overflow:auto;padding:12px 16px;background:#f7faf8;border-bottom:1px solid #e3eee7}
+.assessment-tabs button{font-size:11px;font-weight:800;flex:none;border:1px solid #d7e8df;background:#fff;color:#365a49;border-radius:6px;padding:9px 10px}
+.assessment-tabs button.active{background:#097748;border-color:#097748;color:white}
+.assessment-fields{padding:16px 18px}
+.assessment-fields h3{font-size:15px;margin:0 0 15px}
+.assessment-fields .reg-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.assessment-fields .reg-field{min-width:0}
+.assessment-fields input,.assessment-fields select{width:100%}
+.assessment-actions{display:flex;gap:9px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:16px 18px;border-top:1px solid #e3eee7}
+.assessment-actions button{display:inline-flex;align-items:center;gap:7px}
+.assessment-actions button:disabled{opacity:.45;cursor:not-allowed}
+.assessment-validation{margin:0 18px 16px;padding:10px 12px;background:#fff9ed;border:1px solid #f2dcaf;border-radius:6px;font-size:12px}
+.assessment-validation summary{cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:800}
+.assessment-validation li{margin:5px 0;color:#705224}
+.assessment-list .reg-search{margin:6px 14px 14px}
+.assessment-items{max-height:65vh;overflow:auto}
+.assessment-items button{display:flex;flex-direction:column;text-align:left;gap:4px;width:100%;padding:12px 16px;background:#fff;border:0;border-top:1px solid #e7efea;color:#234735;cursor:pointer}
+.assessment-items button:hover{background:#eff9f3}
+.assessment-items strong{font-size:12px}
+.assessment-items span,.assessment-items small{font-size:11px;color:#688173}
+@media(max-width:1000px){.assessment-layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:650px){
+ .assessment-fields .reg-form-grid{grid-template-columns:minmax(0,1fr)}
+ .assessment-editor .panel-head{flex-wrap:wrap}
+ .assessment-actions{justify-content:flex-start}
+ .app-shell .topbar{min-height:54px}
+}
