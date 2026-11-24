@@ -631,6 +631,20 @@ def test_published_form_reporting_requires_approved_mapping_and_officer_chain(cl
     ]
     assert published.json()["official"] is False
     assert published.json()["aggregation_policy"].startswith("NO_NATIONAL_TOTALS")
+    csv_result=client.get("/api/v1/stage/forms/reports/published.csv?period_code=2026-11",
+                          headers=headers("district"))
+    assert csv_result.status_code==200,csv_result.text
+    import csv,io
+    csv_rows=list(csv.DictReader(io.StringIO(csv_result.text)))
+    assert any(x["event_id"]==event and x["field_id"]=="rainfall" and
+               x["unit"]=="mm" and x["data_status"]=="PUBLISHED_DEMO_ONLY"
+               for x in csv_rows)
+    assert client.get("/api/v1/stage/forms/reports/published.csv?period_code=2026-11",
+                      headers=headers("collector")).status_code==403
+    district_outside=client.get("/api/v1/stage/forms/reports/published.csv?period_code=2026-11",
+                               headers=headers("other_district"))
+    assert district_outside.status_code==200
+    assert all(x["event_id"]!=event for x in csv.DictReader(io.StringIO(district_outside.text)))
     assert not any(x["event_id"]==event for x in report("other_district").json()["items"])
     assert client.get(report_url+"&form_id=not_approved",
         headers=headers("admin")).status_code==422
@@ -643,6 +657,10 @@ def test_published_reporting_rejects_mixed_currencies_and_nonadditive_fields():
     assert _metrics("water_availability",{"storage_percent":"34.2"})==[
       {"field":"storage_percent","value":"34.2","unit":"percent"}]
     assert "new_scheme_request" not in MODULES
+    from server.core.published_field_reports import _csv_safe
+    assert _csv_safe("=HYPERLINK(1)")=="'=HYPERLINK(1)"
+    assert _csv_safe(" +SUM(3)")=="' +SUM(3)"
+    assert _csv_safe("Canal A")=="Canal A"
 
 
 def test_collector_receipt_status_returns_actual_officer_reason_without_geographic_leak(client):
