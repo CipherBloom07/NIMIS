@@ -14,9 +14,9 @@ const stages = {
   admin: {
     username: 'admin.demo', endpoint: 'admin-inbox',
     title: 'Admin — Fictional Publication',
-    eligible: 'REVIEWED', approve: 'PUBLISH', approveLabel: 'Publish test',
+    eligible: 'REVIEWED', approve: 'TECH_APPROVE', approveLabel: 'Technical approve test',
     allowReturn: false,
-    description: 'Only provincially reviewed fictional records can be published to the test state. No real dashboards are affected.',
+    description: 'National technical approval is required after provincial review and before fictional publication. No real dashboards are affected.',
   },
 };
 
@@ -97,14 +97,14 @@ export default function ReviewStageInbox({ stage }) {
             <td><strong>{item.scheme_name}</strong><br/><small>{item.scheme_id}</small></td>
             <td>{item.note}</td><td>{item.district_code}</td>
             <td><strong>{item.status}</strong>{item.review_note && <p>{item.review_note}</p>}</td>
-            <td>{item.status === config.eligible ? <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            <td>{(item.status === config.eligible || (stage === 'admin' && item.status === 'TECH_APPROVED')) ? <div style={{display:'flex',flexDirection:'column',gap:8}}>
               {config.allowReturn && <input maxLength={200}
                 aria-label={'Return reason for ' + item.scheme_id}
                 value={notes[item.event_id] || ''}
                 placeholder="Reason if returning for correction"
                 onChange={event => setNotes(before => ({...before, [item.event_id]: event.target.value}))}/>}
               <button className="reg-primary" disabled={busy}
-                onClick={() => void decide(item.event_id, config.approve)}>{config.approveLabel}</button>
+                onClick={() => void decide(item.event_id, stage === 'admin' && item.status === 'TECH_APPROVED' ? 'PUBLISH' : config.approve)}>{stage === 'admin' && item.status === 'TECH_APPROVED' ? 'Publish test' : config.approveLabel}</button>
               {config.allowReturn && <button className="ghost-btn"
                 disabled={busy || !(notes[item.event_id] || '').trim()}
                 onClick={() => void decide(item.event_id, 'RETURN')}>Return test</button>}
