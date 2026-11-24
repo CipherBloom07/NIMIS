@@ -10,6 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out source
+        uses: actions/checkout@v4
       - name: Validate local PowerShell launch syntax
         shell: pwsh
         run: |
@@ -19,13 +21,11 @@ jobs:
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $path).Path,[ref]$tokens,[ref]$errors) | Out-Null
             if ($errors.Count -gt 0) {
-              foreach ($error in $errors) { Write-Error "$path : $error" }
+              foreach ($parseError in $errors) { Write-Error "$path : $parseError" }
               throw "PowerShell syntax validation failed: $path"
             }
             Write-Host "POWERSHELL_PARSE_PASS: $path"
           }
-      - name: Check out source
-        uses: actions/checkout@v4
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
