@@ -346,6 +346,7 @@ def test_new_scheme_proposal_never_creates_master_record(client,env):
 def test_signed_identity_mode_never_accepts_fake_development_header(client,env,monkeypatch):
     from server.core import oidc_identity
     monkeypatch.setenv("NIMIS_STAGE_OIDC_ENABLED","1")
+    monkeypatch.setenv("NIMIS_STAGE_DEV_AUTH","0")
     try:
         # Without credentials, even an existing synthetic UUID must not work.
         blocked=client.get("/api/v1/stage/me",headers=headers("admin"))
