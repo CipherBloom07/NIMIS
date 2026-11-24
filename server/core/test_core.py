@@ -302,6 +302,13 @@ def test_proposed_collector_form_sync_is_scoped_idempotent_and_stays_unapproved(
     assert district.status_code==200,district.text
     item=next(x for x in district.json()["items"] if x["event_id"]==request["event_id"])
     assert item["status"]=="AWAITING_FORM_APPROVAL"
+    detail_url="/api/v1/stage/forms/submissions/"+request["event_id"]
+    permitted=client.get(detail_url,headers=headers("district"))
+    assert permitted.status_code==200,permitted.text
+    assert permitted.json()["answers"]["water_level"]=="3.4"
+    assert client.get(detail_url,headers=headers("other_district")).status_code==404
+    assert client.get(detail_url,headers=headers("province")).status_code==200
+    assert client.get(detail_url,headers=headers("collector")).status_code==200
     invisible=client.get("/api/v1/stage/forms/inbox",headers=headers("other_district"))
     assert not any(x["event_id"]==request["event_id"] for x in invisible.json()["items"])
 
