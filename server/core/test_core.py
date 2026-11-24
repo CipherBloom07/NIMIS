@@ -28,11 +28,8 @@ def env():
     with psycopg.connect(url) as conn:
         conn.execute(SCHEMA.read_text(encoding="utf8"))
         # The runtime API must not execute as the PostgreSQL administrator.
-        conn.execute("""DO $ BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nimis_stage_demo') THEN
-              CREATE ROLE nimis_stage_demo LOGIN PASSWORD 'local-ci-only-demo-password';
-            END IF;
-        END $""")
+        if conn.execute("SELECT 1 FROM pg_roles WHERE rolname='nimis_stage_demo'").fetchone() is None:
+            conn.execute("CREATE ROLE nimis_stage_demo LOGIN PASSWORD 'local-ci-only-demo-password'")
         conn.execute("GRANT CONNECT ON DATABASE nimis_core_dev TO nimis_stage_demo")
         conn.execute("GRANT USAGE ON SCHEMA nimis_stage TO nimis_stage_demo")
         conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA nimis_stage TO nimis_stage_demo")
