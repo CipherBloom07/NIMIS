@@ -6,6 +6,9 @@ This stage API deliberately never presents the values as official national figur
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
+import csv
+import io
+from fastapi.responses import Response
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -136,3 +139,43 @@ def published_form_report(
         "items":items,
         "aggregation_policy":"NO_NATIONAL_TOTALS: versioned observations are presented by scheme, form and record; overlapping schemes and mixed units are never summed.",
     }
+
+def _csv_safe(value):
+    text="" if value is None else str(value)
+    # Prevent spreadsheet formula execution even if source/scheme name is hostile.
+    if text.lstrip().startswith(("=","+","-","@")) or text.startswith(("\\t","\\r","\\n")):
+        return "'"+text
+    return text
+
+
+@router.get("/reports/published.csv")
+def published_form_csv(
+    period_code:str=Query(...,pattern=r"^\\d{4}-(0[1-9]|1[0-2])$"),
+    form_id:str|None=Query(default=None,min_length=3,max_length=90),
+    user=Depends(actor),
+):
+    """Scoped row-level Power BI/CSV *pilot* export; never official totals."""
+    result=published_form_report(period_code=period_code,form_id=form_id,user=user)
+    output=io.StringIO(newline="")
+    writer=csv.writer(output)
+    writer.writerow([
+      "record_id","event_id","scheme_id","scheme_code","scheme_name",
+      "province_code","district_code","module","form_id","form_version",
+      "period_code","observed_at","source","field_id","value","unit","data_status",
+    ])
+    for row in result["items"]:
+        metrics=row["metrics"] or [{"field":"","value":"","unit":""}]
+        for metric in metrics:
+            writer.writerow([_csv_safe(value) for value in [
+              row["record_id"],row["event_id"],row["scheme_id"],row["scheme_code"],
+              row["scheme_name"],row["province_code"],row["district_code"],
+              row["module"],row["form_id"],row["form_version"],row["period_code"],
+              row["observed_at"],row["source"],metric["field"],metric["value"],
+              metric["unit"],"PUBLISHED_DEMO_ONLY",
+            ]])
+    return Response(
+      content=output.getvalue(),
+      media_type="text/csv; charset=utf-8",
+      headers={"Cache-Control":"private, no-store",
+               "Content-Disposition":'attachment; filename="nimis-published-pilot.csv"'},
+    )
