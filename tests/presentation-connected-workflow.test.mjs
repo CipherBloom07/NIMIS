@@ -33,3 +33,11 @@ test('smoke checks identity scoping and published report without changing record
  assert.doesNotMatch(smoke,/Invoke-RestMethod[^\n]+-Method\s+Post|DELETE FROM|INSERT INTO/);
  assert.match(published,/reports\/published\?period_code=/);
 });
+
+
+test('presentation can initialize a new project-scoped portable Postgres without touching older data',()=>{
+ assert.match(launch,/START_POSTGRES_LOCAL\.ps1/);
+ assert.match(launch,/& \$Bootstrap -SetupOnly/);
+ assert.match(launch,/\$DatabaseProject=\$CollectorApp/);
+ assert.match(launch,/COLLECTOR_POSTGRES_BOOTSTRAP_INCOMPLETE/);
+});

@@ -36,7 +36,23 @@ if(-not $DatabaseProject){
    }
  }
 }
-if(-not $DatabaseProject){throw 'INSTALLED_PORTABLE_POSTGRES_NOT_FOUND: supply -DatabaseProject'}
+if(-not $DatabaseProject){
+  # A fresh Collector checkout has no bundled database binaries. Bootstrap
+  # the isolated project database using its own safe installer rather than
+  # forcing every presentation user to find an obsolete DCA NIMIS directory.
+  $Bootstrap=Join-Path $CollectorApp 'scripts\START_POSTGRES_LOCAL.ps1'
+  if(-not (Test-Path -LiteralPath $Bootstrap)){
+    throw 'COLLECTOR_POSTGRES_BOOTSTRAP_MISSING: update NIMIS-Data-Collection main'
+  }
+  Write-Host 'PORTABLE_POSTGRES: no installed project database found.' -ForegroundColor Yellow
+  Write-Host 'Checking Collector project and Downloads for PostgreSQL 16 binaries...' -ForegroundColor Cyan
+  & $Bootstrap -SetupOnly
+  if(-not (Test-Path -LiteralPath (Join-Path $CollectorApp 'database\postgresql\bin\pg_ctl.exe'))){
+    throw 'COLLECTOR_POSTGRES_BOOTSTRAP_INCOMPLETE: inspect installer error above'
+  }
+  $DatabaseProject=$CollectorApp
+  Write-Host ('PORTABLE_POSTGRES_BOOTSTRAPPED: '+$DatabaseProject) -ForegroundColor Green
+}
 $DatabaseProject=(Resolve-Path -LiteralPath $DatabaseProject).Path
 $Data=Join-Path $DatabaseProject 'database\data'
 $Bin=Join-Path $DatabaseProject 'database\postgresql\bin'
