@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS nimis_stage.submission (
  base_scheme_revision bigint NOT NULL CHECK (base_scheme_revision > 0),
  captured_at timestamptz NOT NULL,
  received_at timestamptz NOT NULL DEFAULT now(),
+ prior_submission_id uuid REFERENCES nimis_stage.submission(submission_id),
+ record_revision integer NOT NULL DEFAULT 1 CHECK(record_revision>0),
  payload jsonb NOT NULL CHECK(jsonb_typeof(payload)='object'),
  content_sha256 char(64) NOT NULL,
  status text NOT NULL DEFAULT 'SUBMITTED' CHECK
@@ -60,6 +62,14 @@ CREATE TABLE IF NOT EXISTS nimis_stage.submission (
  is_demo boolean NOT NULL DEFAULT true,
  CHECK (octet_length(payload::text)<=524288)
 );
+-- Existing local Stage 1 clusters can be extended without deleting records.
+ALTER TABLE nimis_stage.submission
+ ADD COLUMN IF NOT EXISTS prior_submission_id uuid REFERENCES nimis_stage.submission(submission_id);
+ALTER TABLE nimis_stage.submission
+ ADD COLUMN IF NOT EXISTS record_revision integer NOT NULL DEFAULT 1;
+-- A version is unique per scheme + form + reporting period, preventing parallel unlinked copies.
+CREATE UNIQUE INDEX IF NOT EXISTS submission_period_revision_uidx
+ ON nimis_stage.submission(scheme_id,form_id,period_code,record_revision);
 CREATE INDEX IF NOT EXISTS submission_scheme_period_idx
  ON nimis_stage.submission(scheme_id,form_id,period_code,received_at);
 CREATE INDEX IF NOT EXISTS submission_status_idx
