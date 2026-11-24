@@ -145,6 +145,37 @@ def test_submission_idempotency_and_full_workflow(client):
     assert client.get("/api/v1/stage/report/area?period_code=2026-11",headers=headers("collector")).status_code==403
     assert decision("district","VERIFY").status_code==409
 
+def test_corrections_link_to_previous_revision_and_preserve_season_history(client):
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+                       headers=headers("district"),json={"collector_id":ACTORS["collector"]}).status_code==200
+    first=new_submission(scheme)
+    a=client.post("/api/v1/stage/submissions",headers=headers("collector"),json=first)
+    assert a.status_code==200,a.text
+    assert a.json()["record_revision"]==1
+
+    second={**new_submission(scheme),"period_code":first["period_code"]}
+    rejected=client.post("/api/v1/stage/submissions",headers=headers("collector"),json=second)
+    assert rejected.status_code==409,rejected.text
+    assert rejected.json()["detail"]["code"]=="CORRECTION_CHAIN_CONFLICT"
+
+    second["prior_submission_id"]=first["submission_id"]
+    accepted=client.post("/api/v1/stage/submissions",headers=headers("collector"),json=second)
+    assert accepted.status_code==200,accepted.text
+    assert accepted.json()["record_revision"]==2
+    assert client.post("/api/v1/stage/submissions",headers=headers("collector"),json=second).json()["outcome"]=="duplicate"
+    previous=new_submission(scheme)
+    previous["period_code"]="2026-10"
+    historical=client.post("/api/v1/stage/submissions",headers=headers("collector"),json=previous)
+    assert historical.status_code==200,historical.text
+    assert historical.json()["record_revision"]==1
+    with psycopg.connect(os.environ["NIMIS_TEST_DATABASE_URL"]) as conn:
+        rows=conn.execute("""SELECT submission_id,prior_submission_id,period_code,record_revision
+            FROM nimis_stage.submission WHERE scheme_id=%s
+            ORDER BY period_code,record_revision""",(scheme,)).fetchall()
+        assert len(rows)==3
+        assert rows[2][1]==first["submission_id"] or str(rows[2][1])==first["submission_id"]
+
 def test_optimistic_lock_prevents_two_writers_overwriting(client):
     scheme=new_scheme(client)
     payload={"base_revision":1,"scheme_name":"Test concurrency update","operational_status":"Partially functional",
