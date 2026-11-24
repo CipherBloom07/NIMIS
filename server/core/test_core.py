@@ -25,9 +25,30 @@ def env():
         pytest.skip("Run only with an isolated local nimis_core_dev database")
     os.environ["NIMIS_STAGE_ENABLE"]="1"
     os.environ["NIMIS_STAGE_DEV_AUTH"]="1"
-    os.environ["NIMIS_STAGE_DATABASE_URL"]=url
     with psycopg.connect(url) as conn:
         conn.execute(SCHEMA.read_text(encoding="utf8"))
+        # The runtime API must not execute as the PostgreSQL administrator.
+        conn.execute("""DO $ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nimis_stage_demo') THEN
+              CREATE ROLE nimis_stage_demo LOGIN PASSWORD 'local-ci-only-demo-password';
+            END IF;
+        END $""")
+        conn.execute("GRANT CONNECT ON DATABASE nimis_core_dev TO nimis_stage_demo")
+        conn.execute("GRANT USAGE ON SCHEMA nimis_stage TO nimis_stage_demo")
+        conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA nimis_stage TO nimis_stage_demo")
+        conn.execute("""GRANT INSERT ON nimis_stage.scheme,nimis_stage.assignment,
+          nimis_stage.submission,nimis_stage.decision,nimis_stage.audit TO nimis_stage_demo""")
+        conn.execute("""GRANT UPDATE(scheme_name,operational_status,equipped_ha,developed_ha,functional_ha,
+             revision,updated_at) ON nimis_stage.scheme TO nimis_stage_demo""")
+        conn.execute("GRANT UPDATE(revoked_at,assigned_by) ON nimis_stage.assignment TO nimis_stage_demo")
+        conn.execute("GRANT UPDATE(status,latest_decision_at) ON nimis_stage.submission TO nimis_stage_demo")
+        conn.execute("GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA nimis_stage TO nimis_stage_demo")
+        conn.execute("REVOKE CREATE ON SCHEMA nimis_stage FROM nimis_stage_demo")
+    from urllib.parse import urlunparse
+    stage = parsed._replace(netloc='nimis_stage_demo:local-ci-only-demo-password@127.0.0.1:5432')
+    os.environ["NIMIS_STAGE_DATABASE_URL"]=urlunparse(stage._replace(path="/nimis_core_dev"))
+    with psycopg.connect(url) as conn:
+
         data=[
           (ACTORS["admin"],"Fictional admin","admin",None,None),
           (ACTORS["province"],"Fictional province","provincial_officer","DEMO-P",None),
@@ -68,6 +89,17 @@ def new_submission(scheme_id,revision=1):
                        "unit":"ha","observed_at":now,"source":"Fictional field inspection"}],
       "note":"Synthetic baseline example; no real Ministry information."
     }
+
+def test_stage_database_login_cannot_delete_master_or_audit(env):
+    with psycopg.connect(os.environ["NIMIS_STAGE_DATABASE_URL"]) as restricted:
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            restricted.execute("DELETE FROM nimis_stage.scheme")
+    with psycopg.connect(os.environ["NIMIS_STAGE_DATABASE_URL"]) as restricted:
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            restricted.execute("UPDATE nimis_stage.audit SET event_type='FORGED'")
+    with psycopg.connect(os.environ["NIMIS_STAGE_DATABASE_URL"]) as restricted:
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            restricted.execute("DROP TABLE nimis_stage.scheme")
 
 def test_gated_without_fake_auth(client,monkeypatch):
     monkeypatch.setenv("NIMIS_STAGE_DEV_AUTH","0")
