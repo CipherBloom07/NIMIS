@@ -399,3 +399,71 @@ def test_identity_provider_config_is_fail_closed(monkeypatch):
     with pytest.raises(HTTPException) as config:
         verified_subject("Bearer a.b.c")
     assert config.value.status_code==503
+
+
+def test_private_evidence_checksum_authorization_and_form_references(client,env):
+    import hashlib
+    scheme=new_scheme(client)
+    assert client.post(f"/api/v1/stage/schemes/{scheme}/assign",
+                       headers=headers("district"),
+                       json={"collector_id":ACTORS["collector"]}).status_code==200
+    photo_id=str(uuid4())
+    # Enough JPEG signature for the bounded transport check (not a real photograph).
+    photo=bytes.fromhex("ffd8ffdb")+bytes(128)
+    digest=hashlib.sha256(photo).hexdigest()
+    route=f"/api/v1/stage/forms/evidence/{photo_id}?scheme_id={scheme}"
+    auth={**headers("collector"),"Content-Type":"image/jpeg",
+          "X-Content-SHA256":digest}
+    missing_checksum=client.put(route,headers=headers("collector")|
+         {"Content-Type":"image/jpeg"},content=photo)
+    assert missing_checksum.status_code==422
+    other=client.put(route,headers={**headers("other_district"),
+                    "Content-Type":"image/jpeg","X-Content-SHA256":digest},content=photo)
+    assert other.status_code==403
+    uploaded=client.put(route,headers=auth,content=photo)
+    assert uploaded.status_code==200,uploaded.text
+    assert uploaded.json()["outcome"]=="accepted"
+    assert uploaded.json()["sha256"]==digest
+    identical=client.put(route,headers=auth,content=photo)
+    assert identical.status_code==200,identical.text
+    assert identical.json()["outcome"]=="duplicate"
+    changed=bytes.fromhex("ffd8ffdb")+bytes(127)+b"x"
+    clash=client.put(route,headers={**auth,
+        "X-Content-SHA256":hashlib.sha256(changed).hexdigest()},content=changed)
+    assert clash.status_code==409,clash.text
+    owner=client.get(f"/api/v1/stage/forms/evidence/{photo_id}",
+                     headers=headers("collector"))
+    assert owner.status_code==200,owner.text
+    assert owner.content==photo
+    other_read=client.get(f"/api/v1/stage/forms/evidence/{photo_id}",
+                          headers=headers("other_district"))
+    assert other_read.status_code==404
+    district=client.get(f"/api/v1/stage/forms/evidence/{photo_id}",
+                        headers=headers("district"))
+    assert district.status_code==200
+
+    now=datetime.now(timezone.utc).isoformat()
+    body={"event_id":str(uuid4()),"record_id":str(uuid4()),"revision":1,
+        "device_id":str(uuid4()),"scheme_id":scheme,"form_id":"infrastructure_incident",
+        "form_version":1,"period_code":"2026-11",
+        "captured_at":now,"observed_at":now,"source":"Fictional inspection",
+        "base_scheme_revision":1,
+        "answers":{"photo_ids":[photo_id],"incident_description":"Synthetic incident"}}
+    receipt=client.post("/api/v1/stage/forms/sync/push",
+                headers=headers("collector"),json={"operations":[body]})
+    assert receipt.status_code==200,receipt.text
+    assert receipt.json()["results"][0]["outcome"]=="accepted"
+    assert receipt.json()["results"][0]["status"]=="AWAITING_FORM_APPROVAL"
+    with psycopg.connect(env) as conn:
+        evidence_pending=conn.execute(
+            "SELECT evidence_pending FROM nimis_stage.field_form_submission WHERE event_id=%s",
+            (body["event_id"],)).fetchone()[0]
+        assert evidence_pending is False
+
+    unknown=str(uuid4())
+    body2={**body,"event_id":str(uuid4()),"record_id":str(uuid4()),
+           "answers":{"photo_ids":[unknown],"incident_description":"Synthetic incident"}}
+    receipt2=client.post("/api/v1/stage/forms/sync/push",
+                headers=headers("collector"),json={"operations":[body2]})
+    assert receipt2.status_code==200,receipt2.text
+    assert receipt2.json()["results"][0]["status"]=="EVIDENCE_PENDING"
