@@ -20,7 +20,7 @@ const MODULE_LABELS={
   beneficiaries:'Beneficiary records'
 };
 function initialMonth(){return new Date().toISOString().slice(0,7)}
-export default function PublishedFieldPreview(){
+export default function PublishedFieldPreview({moduleFilter=null}){
   const [role,setRole]=useState('district');
   const [month,setMonth]=useState(initialMonth);
   const [rows,setRows]=useState([]);
@@ -56,7 +56,8 @@ export default function PublishedFieldPreview(){
     }finally{setBusy(false)}
   }
   if(!import.meta.env.DEV)return null;
-  const modules=[...new Set(rows.map(row=>row.module))];
+  const visibleRows=moduleFilter?rows.filter(row=>moduleFilter.includes(row.module)):rows;
+  const modules=[...new Set(visibleRows.map(row=>row.module))];
   return <section className="panel" style={{padding:18,marginBottom:20}}>
     <div className="panel-head"><div>
       <h2><Database size={18} style={{verticalAlign:'middle',marginRight:8}}/>Connected field reporting — Development Test</h2>
@@ -81,10 +82,10 @@ export default function PublishedFieldPreview(){
     </div>
     <p role="status" style={{padding:'10px 0'}}>{status}</p>
     {loaded&&<>
-      <p><strong>{rows.length} visible records</strong> · {modules.map(key=>MODULE_LABELS[key]||key).join(', ')||'No approved published modules for this month'}</p>
+      <p><strong>{visibleRows.length} matching published records</strong> · {modules.map(key=>MODULE_LABELS[key]||key).join(', ')||'No approved published modules for this month'}</p>
       <div className="table-wrap"><table>
         <thead><tr><th>Module</th><th>Scheme</th><th>District</th><th>Form / month</th><th>Published measurements</th></tr></thead>
-        <tbody>{rows.map(row=><tr key={row.event_id}>
+        <tbody>{visibleRows.map(row=><tr key={row.event_id}>
           <td>{MODULE_LABELS[row.module]||row.module}</td>
           <td>{row.scheme_name}<small style={{display:'block'}}>{row.scheme_code}</small></td>
           <td>{row.district_code}</td>
@@ -94,7 +95,7 @@ export default function PublishedFieldPreview(){
           ):'Nonadditive reviewed record'}</td>
         </tr>)}</tbody>
       </table></div>
-      {!rows.length&&<p>No eligible published records. Submitting a form alone must not increase this count.</p>}
+      {!visibleRows.length&&<p>No eligible published records. Submitting a form alone must not increase this count.</p>}
       {nextOffset!==null&&<button type="button" className="ghost-btn" disabled={busy}
         onClick={()=>void load(nextOffset)}>Load more published records</button>}
     </>}
