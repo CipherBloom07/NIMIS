@@ -1,4 +1,4 @@
-const CACHE_NAME='nimis-app-shell-v2';
+const CACHE_NAME='nimis-app-shell-v3';
 const APP_BASE=new URL(self.registration.scope);
 const INDEX_URL=new URL('index.html',APP_BASE).toString();
 self.addEventListener('install',event=>{
@@ -7,6 +7,9 @@ self.addEventListener('install',event=>{
   const response=await fetch(INDEX_URL,{cache:'reload'});
   if(!response.ok)throw new Error('NIMIS application shell could not be cached');
   await cache.put(INDEX_URL,response.clone());
+  // Pre-cache the official emblem so it remains available offline and after upgrades.
+  const logoUrl=new URL('nimis-coat-of-arms.png',APP_BASE).toString();
+  try{const logo=await fetch(logoUrl,{cache:'reload'});if(logo.ok)await cache.put(logoUrl,logo)}catch{}
   const html=await response.text();
   const assets=[...html.matchAll(/(?:src|href)=["']([^"']+\.(?:js|css))["']/g)].map(match=>new URL(match[1],APP_BASE).toString());
   await Promise.all(assets.map(async asset=>{try{const item=await fetch(asset);if(item.ok)await cache.put(asset,item)}catch{}}));
