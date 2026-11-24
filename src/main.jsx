@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import './design-tokens.css';
 import './styles.css';
+import './requirements-theme.css';
 
 if ('storage' in navigator && navigator.storage?.persist) {
   navigator.storage.persist().catch(() => false);
