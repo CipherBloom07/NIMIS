@@ -1550,3 +1550,8 @@ tbody tr:hover{background:#f8f9fa}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* Main NIMIS emblem: retain original Zimbabwe image proportions within logo tile. */
+.brand-mark{display:flex;align-items:center;justify-content:center;overflow:hidden;min-width:42px;min-height:42px;background:#fff}
+.brand-mark .official-logo-image{display:block;width:100%;height:100%;max-width:100%;object-fit:contain;padding:3px}
+.brand-mark .official-logo-fallback{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-weight:900;font-size:10px;letter-spacing:.3px;color:#075a32;background:#fff}
