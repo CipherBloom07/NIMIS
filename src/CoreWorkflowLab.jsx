@@ -111,9 +111,18 @@ export default function CoreWorkflowLab(){
   });
  }
  async function decideField(row,action,role){
+  let reason='';
+  if(action==='RETURN'){
+    const entered=window.prompt('Enter the fictional reason for returning this form (required):','Recheck the recorded measurement');
+    if(entered===null)return;
+    reason=entered.trim();
+    if(!reason||reason.length>500){
+      setMessage('Return requires a reason of 1–500 characters');return;
+    }
+  }
   await perform('Field form '+action,async()=>{
     const response=await call('/forms/submissions/'+encodeURIComponent(row.event_id)+'/decisions',
-      'POST',{decision_id:uid(),action,reason:action==='RETURN'?'Requires correction':''},role);
+      'POST',{decision_id:uid(),action,reason},role);
     const updated=await call('/forms/inbox');
     setFieldInbox(updated.items||[]);
     return response;
@@ -237,8 +246,14 @@ export default function CoreWorkflowLab(){
             who==='province'&&row.status==='DISTRICT_VERIFIED'?'REVIEW':
             who==='admin'&&row.status==='PROVINCIAL_REVIEWED'?'TECHNICAL_APPROVE':
             who==='admin'&&row.status==='TECHNICAL_APPROVED'?'PUBLISH':null;
-          return action?<button type="button" className="reg-primary" disabled={busy}
-            onClick={()=>void decideField(row,action,who)}>{action.replaceAll('_',' ')}</button>:null;
+          const canReturn=(who==='district'&&row.status==='AWAITING_FORM_APPROVAL')||
+            (who==='province'&&row.status==='DISTRICT_VERIFIED');
+          return <span style={{display:'inline-flex',gap:7,flexWrap:'wrap'}}>
+            {action&&<button type="button" className="reg-primary" disabled={busy}
+              onClick={()=>void decideField(row,action,who)}>{action.replaceAll('_',' ')}</button>}
+            {canReturn&&<button type="button" className="ghost-btn" disabled={busy}
+              onClick={()=>void decideField(row,'RETURN',who)}>Return for correction</button>}
+          </span>;
         })()}</td>
     </tr>)}</tbody></table></div>
     {!fieldInbox.length&&<p style={{padding:18}}>No proposed form submissions visible to this test officer. Select Connect / Refresh.</p>}
