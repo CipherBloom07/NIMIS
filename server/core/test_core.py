@@ -145,6 +145,10 @@ def test_submission_idempotency_and_full_workflow(client):
     assert changed.status_code==409
 
     sid=payload["submission_id"]
+    pull=client.get(f"/api/v1/stage/sync/status/{sid}",headers=headers("collector"))
+    assert pull.status_code==200,pull.text
+    assert pull.json()["status"]=="SUBMITTED"
+    assert client.get(f"/api/v1/stage/sync/status/{sid}",headers=headers("district")).status_code==404
     def decision(who,action,event_id=None,reason=""):
         return client.post(f"/api/v1/stage/submissions/{sid}/decisions",
             headers=headers(who),json={"event_id":event_id or str(uuid4()),"action":action,"reason":reason})
@@ -163,6 +167,11 @@ def test_submission_idempotency_and_full_workflow(client):
     published=decision("admin","PUBLISH")
     assert published.status_code==200,published.text
     assert published.json()["status"]=="PUBLISHED"
+    after=client.get(f"/api/v1/stage/sync/status/{sid}",headers=headers("collector"))
+    assert after.status_code==200,after.text
+    assert after.json()["status"]=="PUBLISHED"
+    assert [x["action"] for x in after.json()["decisions"]]==[
+        "VERIFY","REVIEW","TECHNICAL_APPROVE","PUBLISH"]
     report=client.get("/api/v1/stage/report/area?period_code=2026-11",headers=headers("province"))
     assert report.status_code==200,report.text
     assert report.json()["official"] is False
