@@ -1,8 +1,14 @@
+import OfficialLogo from './OfficialLogo.jsx';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import RegistryPage from './Registry.jsx';
 import DataManagement from './DataManagement.jsx';
+import DistrictInbox from './DistrictInbox.jsx';
+import ReviewStageInbox from './ReviewStageInbox.jsx';
+import SchemeAssessment from './SchemeAssessment.jsx';
+import HistoricalBriefing from './HistoricalBriefing.jsx';
+import ExecutiveOverview from './ExecutiveOverview.jsx';
 import {enqueueSyncChange,synchronizeIfConfigured,readSyncQueue} from './dataSync.js';
 import {
   LayoutDashboard, Map, Droplets, Wrench, Sprout, ClipboardList, Database, Upload,
@@ -20,7 +26,14 @@ const nav = [
   { id: 'agronomy', label: 'Agronomy & Production', icon: Sprout, group: 'MONITORING' },
   { id: 'projects', label: 'Project Implementation', icon: ClipboardList, group: 'MANAGEMENT' },
   { id: 'registry', label: 'Scheme Registry', icon: Database, group: 'MANAGEMENT' },
+  { id: 'assessment', label: 'Scheme Baseline Assessment', icon: ClipboardList, group: 'MANAGEMENT' },
+  { id: 'briefing', label: '2026 Ministerial Briefing', icon: FileBarChart2, group: 'MANAGEMENT' },
   { id: 'data', label: 'Data Management & Verification', icon: Upload, group: 'MANAGEMENT' },
+  ...(import.meta.env.DEV ? [
+    { id: 'district-inbox', label: 'District Collector Inbox (Test)', icon: ClipboardList, group: 'MANAGEMENT' },
+    { id: 'provincial-inbox', label: 'Provincial Review (Test)', icon: ShieldCheck, group: 'MANAGEMENT' },
+    { id: 'admin-inbox', label: 'Admin Publication (Test)', icon: ShieldCheck, group: 'MANAGEMENT' },
+  ] : []),
   { id: 'reports', label: 'Reports & Analytics', icon: FileBarChart2, group: 'MANAGEMENT' },
 ];
 
@@ -170,13 +183,8 @@ function DashboardVisuals({records,totals,format}) {
 function ModulePage({id}) {
   const m=moduleDescriptions[id] || moduleDescriptions.reports;
   const storageKey=`nimis-module-${id}-v1`;
-  const initial=schemes.map((s,i)=>({
-    ref:s.id,schemeId:s.id,name:s.name,province:s.province,district:s.district,
-    category:id==='water'?'Dam / river source':id==='infrastructure'?'Conveyance system':id==='agronomy'?'Maize':id==='projects'?'Rehabilitation':id==='gis'?'Scheme location':'Scheme profile',
-    status:i===2?'Under review':i===4?'Attention required':'Verified',
-    detail:id==='water'?'Source observation pending verification':id==='infrastructure'?'Condition assessment recorded':id==='agronomy'?'2026/27 season sample record':id==='projects'?'Milestone progress requires update':id==='gis'?'Coordinates require field confirmation':'Master profile sample record',
-    updated:'—'
-  }));
+  // No synthetic 'Verified' operational records: begin with a blank local workspace.
+  const initial=[];
   const masterSchemes=useMemo(()=>{const base=schemes.map(s=>({id:s.id,name:s.name,province:s.province,district:s.district}));try{const saved=typeof window!=='undefined'?JSON.parse(window.localStorage.getItem('nimis-registry-v1')):null;return Array.isArray(saved)&&saved.length?saved.map(s=>({id:s.id,name:s.name,province:s.province,district:s.district})):base}catch{return base}} ,[]);
   const [records,setRecords]=useState(()=>{
     try{const saved=typeof window!=='undefined'?JSON.parse(window.localStorage.getItem(storageKey)):null;return Array.isArray(saved)?saved:initial}
@@ -247,9 +255,9 @@ function ModulePage({id}) {
     <ModuleInsights id={id} records={records}/>
     <section className="panel schemes-panel">
       <div className="panel-head"><div><h2>{recordTitle}</h2><p>{filtered.length} records displayed · linked to scheme references</p></div><div className="panel-actions"><button className="ghost-btn" onClick={exportCsv}><Download size={14}/> Export CSV</button><button className="reg-primary" onClick={openNew}>+ Add record</button></div></div>
-      <div className="reg-toolbar"><div className="reg-search"><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, scheme ID, district..."/></div><select value={status} onChange={e=>setStatus(e.target.value)}><option>All statuses</option>{['Draft','Submitted','Under review','Verified','Approved','Attention required'].map(s=><option key={s}>{s}</option>)}</select></div>
+      <div className="reg-toolbar"><div className="reg-search"><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, scheme ID, district..."/></div><select value={status} onChange={e=>setStatus(e.target.value)}><option>All statuses</option>{['Draft','Needs verification','For correction'].map(s=><option key={s}>{s}</option>)}</select></div>
       {filtered.length?<div className="table-wrap"><table><thead><tr><th>Record ID</th><th>Scheme ID</th><th>Scheme / record</th><th>Province / district</th><th>Category</th><th>Status</th><th>Record detail</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{filtered.map(r=><tr key={r.ref}><td>{r.ref}</td><td>{r.schemeId||'—'}</td><td><div className="scheme-name">{r.name}</div></td><td>{r.province}<small style={{display:'block',color:'#98a49c'}}>{r.district}</small></td><td>{r.category}</td><td><Status label={r.status}/></td><td>{r.detail}</td><td>{r.updated}</td><td><div className="reg-actions"><button aria-label="Edit record" title="Edit record" onClick={()=>openEdit(r)}><Pencil size={13}/></button><button aria-label="Delete record" title="Delete local record" onClick={()=>remove(r.ref)}><Trash2 size={13}/></button></div></td></tr>)}</tbody></table></div>:<div className="reg-empty">No matching records. Change the search or add a record.</div>}
-      <div className="reg-foot">Workflow readiness: Capture → Verify → Review → Technical approval → Publish. Approval permissions and shared database integration are not yet connected.</div>
+      <div className="reg-foot">Local drafts are not verified data. Approval and publication require the future shared backend and named, authenticated officers.</div>
     </section>
     {notice&&<div className="data-note" role="status">{notice}<button style={{marginLeft:'auto',border:0,background:'transparent',color:'inherit'}} onClick={()=>setNotice('')}>Dismiss</button></div>}
     {showForm&&<div className="reg-modal-back" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setShowForm(false)}}><section className="reg-modal" role="dialog" aria-modal="true" aria-labelledby="module-form-title"><div className="reg-modal-head"><div><h2 id="module-form-title">{editing?'Edit record':`Add ${formTitle.toLowerCase()}`}</h2><p>Enter a prototype record. It will be saved only in this browser.</p></div><button className="reg-close" onClick={()=>setShowForm(false)} aria-label="Close"><X size={17}/></button></div><form onSubmit={submit}><div className="reg-form-grid">
@@ -320,6 +328,6 @@ export default function App() {
   },[]);
   const activeItem=nav.find(n=>n.id===active); const grouped=useMemo(()=>['OVERVIEW','MONITORING','MANAGEMENT'].map(group=>({group,items:nav.filter(n=>n.group===group)})),[]);
   const change=(id)=>{setActive(id);setSidebarOpen(false);};
-  return <div className="app-shell"><aside className={`sidebar ${sidebarOpen?'open':''}`}><div className="brand"><div className="brand-mark"><img src={`${import.meta.env.BASE_URL}nimis-coat-of-arms.png`} alt="Zimbabwe Coat of Arms" /></div><div className="brand-text"><strong>NIMIS</strong><span>National Irrigation Management Information System</span></div><button className="close-sidebar" onClick={()=>setSidebarOpen(false)}><X size={18}/></button></div><div className="sidebar-divider"/><div className="nav-scroll">{grouped.map(g=><div className="nav-group" key={g.group}><div className="nav-heading">{g.group}</div>{g.items.map(n=>{const Icon=n.icon;return <button className={`nav-item ${active===n.id?'active':''}`} key={n.id} onClick={()=>change(n.id)}><Icon size={17}/><span>{n.label}</span>{active===n.id&&<span className="nav-active-dot"/>}</button>})}</div>)}</div><div className="sidebar-bottom"><div className="user-card"><div className="user-avatar">NI</div><div className="user-info"><strong>NIMIS Preview</strong><span>Prototype workspace</span></div><ChevronDown size={15}/></div><div className="sidebar-footer">Department of Irrigation Development<br/>Government of Zimbabwe</div></div></aside>{sidebarOpen&&<div className="mobile-overlay" onClick={()=>setSidebarOpen(false)}/>}
-  <main className="main-area"><header className="topbar"><div className="ministry-brand"><strong>Ministry of Agriculture, Mechanisation and Water Resources Development</strong><span>Department of Irrigation Development</span></div><button className="mobile-menu icon-btn" onClick={()=>setSidebarOpen(true)}><Menu size={19}/></button><div className="breadcrumb"><span>NIMIS</span><b>/</b><strong>{activeItem?.label}</strong></div><div className="top-actions"><span className={`connection-status ${isOnline?'online':'offline'}`} title={isOnline?'Network connection detected':'Offline mode — changes are saved on this device'}><i/>{isOnline?'Online':'Offline'}{pendingSync>0&&<b>{pendingSync} pending</b>}</span><div className="searchbox"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search schemes, districts..." aria-label="Search"/>{search&&<button onClick={()=>setSearch('')}><X size={13}/></button>}</div><button className="icon-btn notification-btn" aria-label="Notifications"><Bell size={17}/><i/></button><div className="top-user"><div className="user-avatar small">NI</div><span>Preview</span><ChevronDown size={14}/></div></div></header><div className="content-wrap"><div className="content-inner">{active==='dashboard'?<Dashboard onSelect={change}/>:active==='registry'?<RegistryPage/>:active==='reports'?<ReportsPage/>:active==='data'?<DataManagement/>:<ModulePage id={active}/>}<footer className="page-footer"><span>© 2026 NIMIS · National Irrigation Management Information System</span><span><span className="footer-status"/> Prototype environment</span></footer></div></div></main></div>;
+  return <div className="app-shell"><aside className={`sidebar ${sidebarOpen?'open':''}`}><div className="brand"><div className="brand-mark"><OfficialLogo /></div><div className="brand-text"><strong>NIMIS</strong><span>National Irrigation Management Information System</span></div><button className="close-sidebar" onClick={()=>setSidebarOpen(false)}><X size={18}/></button></div><div className="sidebar-divider"/><div className="nav-scroll">{grouped.map(g=><div className="nav-group" key={g.group}><div className="nav-heading">{g.group}</div>{g.items.map(n=>{const Icon=n.icon;return <button className={`nav-item ${active===n.id?'active':''}`} key={n.id} onClick={()=>change(n.id)}><Icon size={17}/><span>{n.label}</span>{active===n.id&&<span className="nav-active-dot"/>}</button>})}</div>)}</div><div className="sidebar-bottom"><div className="user-card"><div className="user-avatar">NI</div><div className="user-info"><strong>NIMIS Preview</strong><span>Prototype workspace</span></div><ChevronDown size={15}/></div><div className="sidebar-footer">Department of Irrigation Development<br/>Government of Zimbabwe</div></div></aside>{sidebarOpen&&<div className="mobile-overlay" onClick={()=>setSidebarOpen(false)}/>}
+  <main className="main-area"><header className="topbar"><div className="ministry-brand"><strong>Ministry of Agriculture, Mechanisation and Water Resources Development</strong><span>Department of Irrigation Development</span></div><button className="mobile-menu icon-btn" onClick={()=>setSidebarOpen(true)}><Menu size={19}/></button><div className="breadcrumb"><span>NIMIS</span><b>/</b><strong>{activeItem?.label}</strong></div><div className="top-actions"><span className={`connection-status ${isOnline?'online':'offline'}`} title={isOnline?'Network connection detected':'Offline mode — changes are saved on this device'}><i/>{isOnline?'Online':'Offline'}{pendingSync>0&&<b>{pendingSync} pending</b>}</span><div className="searchbox"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search schemes, districts..." aria-label="Search"/>{search&&<button onClick={()=>setSearch('')}><X size={13}/></button>}</div><button className="icon-btn notification-btn" aria-label="Notifications"><Bell size={17}/><i/></button><div className="top-user"><div className="user-avatar small">NI</div><span>Preview</span><ChevronDown size={14}/></div></div></header><div className="content-wrap"><div className="content-inner">{active==='dashboard'?<ExecutiveOverview onSelect={change}/>:active==='registry'?<RegistryPage/>:active==='assessment'?<SchemeAssessment/>:active==='briefing'?<HistoricalBriefing/>:active==='reports'?<ReportsPage/>:active==='data'?<DataManagement/>:active==='district-inbox'?<DistrictInbox/>:active==='provincial-inbox'?<ReviewStageInbox stage="provincial"/>:active==='admin-inbox'?<ReviewStageInbox stage="admin"/>:<ModulePage id={active}/>}<footer className="page-footer"><span>© 2026 NIMIS · National Irrigation Management Information System</span><span><span className="footer-status"/> Prototype environment</span></footer></div></div></main></div>;
 }
