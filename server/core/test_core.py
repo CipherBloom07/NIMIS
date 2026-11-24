@@ -792,3 +792,41 @@ def test_returned_form_correction_preserves_lineage_and_blocks_unapproved_overwr
           (scheme,),
         ).fetchone()[0]==1
 
+
+
+def test_stage_api_security_headers_origin_and_oversized_request(client,monkeypatch):
+    health=client.get("/api/v1/stage/health")
+    assert health.status_code==200
+    assert health.headers["cache-control"]=="no-store, private"
+    assert health.headers["x-content-type-options"]=="nosniff"
+    assert health.headers["x-frame-options"]=="DENY"
+    refused=client.post("/api/v1/stage/schemes",headers={
+        **headers("district"),"Origin":"https://untrusted.example"},
+        json={"scheme_code":"DEMO-SECURITY-FAIL","scheme_name":"Fake scheme",
+              "province_code":"DEMO-P","district_code":"DEMO-D"})
+    assert refused.status_code==403
+    assert refused.json()["detail"]=="Untrusted browser origin"
+    oversized=client.post("/api/v1/stage/schemes",headers={
+        **headers("district"),"Content-Length":"200000"},
+        content=b"{}")
+    assert oversized.status_code==413
+    monkeypatch.setenv("NIMIS_STAGE_OIDC_ENABLED","1")
+    monkeypatch.setenv("NIMIS_STAGE_DEV_AUTH","1")
+    try:
+        assert client.get("/api/v1/stage/me",headers=headers("admin")).status_code==503
+        assert client.get("/api/v1/stage/me",headers={
+            **headers("admin"),"Authorization":"Bearer fake.token.signature"}).status_code==503
+    finally:
+        monkeypatch.setenv("NIMIS_STAGE_OIDC_ENABLED","0")
+
+
+def test_jwks_url_is_restricted_to_approved_issuer_origin(monkeypatch):
+    from server.core.oidc_identity import _options
+    monkeypatch.setenv("NIMIS_OIDC_ISSUER","https://identity.ministry.example/realm")
+    monkeypatch.setenv("NIMIS_OIDC_AUDIENCE","nimis")
+    monkeypatch.setenv("NIMIS_OIDC_JWKS_URL",
+                       "https://identity.ministry.example/realm/protocol/keys")
+    assert _options()[1]=="nimis"
+    monkeypatch.setenv("NIMIS_OIDC_JWKS_URL","https://attacker.example/keys")
+    with pytest.raises(Exception):
+        _options()
