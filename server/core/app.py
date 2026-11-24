@@ -133,6 +133,7 @@ class Submit(BaseModel):
     form_id: str = Field(min_length=3,max_length=80)
     form_version: int = Field(ge=1)
     period_code: str = Field(min_length=4,max_length=40)
+    prior_submission_id: UUID | None = None
     base_scheme_revision: int = Field(ge=1)
     captured_at: datetime
     measurements: list[Measure] = Field(min_length=1,max_length=70)
@@ -246,38 +247,65 @@ def assign(scheme_id:UUID,body:Assign,user=Depends(actor)):
 
 @app.post("/api/v1/stage/submissions")
 def submit(body:Submit,user=Depends(actor)):
+    """Append-only operational observation; one linked revision per scheme/form/period.
+    Lock scheme row to serialize same-key concurrent correction requests.
+    """
     need_role(user,"data_collector","district_officer")
     normalized=body.model_dump(mode="json")
     payload={"measurements":normalized["measurements"],"note":body.note}
     canonical=json.dumps(normalized,sort_keys=True,separators=(",",":"),ensure_ascii=False)
     digest=hashlib.sha256(canonical.encode("utf8")).hexdigest()
     with db() as conn:
-        scheme=conn.execute("SELECT * FROM nimis_stage.scheme WHERE scheme_id=%s",(body.scheme_id,)).fetchone()
+        scheme=conn.execute("SELECT * FROM nimis_stage.scheme WHERE scheme_id=%s FOR UPDATE",
+                            (body.scheme_id,)).fetchone()
         if scheme is None:raise HTTPException(404,detail="Scheme not found")
         if not in_scope(user,scheme["province_code"],scheme["district_code"]):
             raise HTTPException(403,detail="Out of geographic scope")
         if user["role_code"]=="data_collector":
-            exists=conn.execute("""SELECT 1 FROM nimis_stage.assignment WHERE scheme_id=%s
+            assigned=conn.execute("""SELECT 1 FROM nimis_stage.assignment WHERE scheme_id=%s
                 AND collector_id=%s AND revoked_at IS NULL""",(body.scheme_id,user["actor_id"])).fetchone()
-            if not exists:raise HTTPException(403,detail="No active scheme assignment")
-        result=conn.execute("""INSERT INTO nimis_stage.submission
-             (submission_id,event_id,scheme_id,collector_id,device_id,form_id,form_version,period_code,
-             base_scheme_revision,captured_at,payload,content_sha256,status)
-             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s)
-             ON CONFLICT (event_id) DO NOTHING RETURNING submission_id""",
+            if not assigned:raise HTTPException(403,detail="No active scheme assignment")
+        # Per-event retry must be checked before any current-version tests.
+        existing=conn.execute("""SELECT submission_id,collector_id,content_sha256,status,record_revision
+           FROM nimis_stage.submission WHERE event_id=%s""",(body.event_id,)).fetchone()
+        if existing is not None:
+            if (existing["collector_id"]!=user["actor_id"] or existing["content_sha256"]!=digest
+                or existing["submission_id"]!=body.submission_id):
+                raise HTTPException(409,detail="Event ID reused with changed content or another actor")
+            return {"event_id":str(body.event_id),"submission_id":str(existing["submission_id"]),
+                    "outcome":"duplicate","status":existing["status"],
+                    "record_revision":existing["record_revision"],
+                    "server_scheme_revision":scheme["revision"],"source":"ISOLATED_DEVELOPMENT"}
+        latest=conn.execute("""SELECT submission_id,record_revision
+          FROM nimis_stage.submission
+          WHERE scheme_id=%s AND form_id=%s AND period_code=%s
+          ORDER BY record_revision DESC LIMIT 1""",
+          (body.scheme_id,body.form_id,body.period_code)).fetchone()
+        previous=latest["submission_id"] if latest else None
+        if body.prior_submission_id != previous:
+            raise HTTPException(409,detail={
+              "code":"CORRECTION_CHAIN_CONFLICT",
+              "message":"Supply the latest submission ID as prior_submission_id, or use a new reporting period.",
+              "latest_submission_id":str(previous) if previous else None,
+            })
+        revision=(latest["record_revision"]+1) if latest else 1
+        status="CONFLICT" if body.base_scheme_revision!=scheme["revision"] else "SUBMITTED"
+        try:
+            conn.execute("""INSERT INTO nimis_stage.submission
+             (submission_id,event_id,scheme_id,collector_id,device_id,form_id,form_version,
+              period_code,prior_submission_id,record_revision,base_scheme_revision,
+              captured_at,payload,content_sha256,status)
+             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s)""",
             (body.submission_id,body.event_id,body.scheme_id,user["actor_id"],body.device_id,
-             body.form_id,body.form_version,body.period_code,body.base_scheme_revision,
-             body.captured_at,json.dumps(payload),digest,
-             "CONFLICT" if body.base_scheme_revision!=scheme["revision"] else "SUBMITTED")).fetchone()
-        current=conn.execute("""SELECT submission_id,collector_id,content_sha256,status,base_scheme_revision
-            FROM nimis_stage.submission WHERE event_id=%s""",(body.event_id,)).fetchone()
-        if current["collector_id"]!=user["actor_id"] or current["content_sha256"]!=digest or current["submission_id"]!=body.submission_id:
-            raise HTTPException(409,detail="Event ID reused with changed content or another actor")
-        if result:
-            conn.execute("""INSERT INTO nimis_stage.audit(actor_id,event_type,entity_type,entity_id)
-                 VALUES (%s,'SUBMISSION_RECEIVED','submission',%s)""",(user["actor_id"],body.submission_id))
-    return {"event_id":str(body.event_id),"submission_id":str(current["submission_id"]),
-            "outcome":"accepted" if result else "duplicate","status":current["status"],
+             body.form_id,body.form_version,body.period_code,previous,revision,
+             body.base_scheme_revision,body.captured_at,json.dumps(payload),digest,status))
+        except psycopg.errors.UniqueViolation:
+            raise HTTPException(409,detail="Duplicate UUID or conflicting reporting-period version") from None
+        conn.execute("""INSERT INTO nimis_stage.audit(actor_id,event_type,entity_type,entity_id,details)
+             VALUES (%s,'SUBMISSION_RECEIVED','submission',%s,%s::jsonb)""",
+             (user["actor_id"],body.submission_id,json.dumps({"period":body.period_code,"record_revision":revision})))
+    return {"event_id":str(body.event_id),"submission_id":str(body.submission_id),
+            "outcome":"accepted","status":status,"record_revision":revision,
             "server_scheme_revision":scheme["revision"],"source":"ISOLATED_DEVELOPMENT"}
 
 @app.get("/api/v1/stage/inbox")
